@@ -1,56 +1,128 @@
 include("groups.jl")
 
-# 定义 BlockTensor 结构体
-struct BlockTensor{Float64, G <: GroupElement}
-    group::Type{G}  # 表示 GroupElement 的具体类型
-    dimensions::Vector{Dict{G, Int}}  # 映射 group elements 到维度的向量
-    data::Dict{Vector{G}, Array{Float64}}  # 主数据，键是 group elements 的向量，值是数组
+# Define the object on the bond
+struct Object{G <: Group}
+    obj::Dict{GroupElement{G}, Int}
+    group::G
+    function Object(X::Dict{GroupElement{G}, Int}, group::G) where {G<:Group}
+        el = elements(group)
+        for g in el
+            if !haskey(X, g)
+                X[g] = 0
+            end
+        end
+        return new{G}(X, group)
+    end
 end
 
+# Custom the display form for an object to be direct sum
+function Base.show(io::IO, x::Object{G}) where {G<:Group}
+    group = x.group
+    obj = x.obj
+    el = elements(group)
+    j = 1
+    for (j,i) in enumerate(el)
+        if obj[i] != 0
+            if j != 1
+                print(io, " ⊕ ")
+            end
+            if obj[i] == 1
+                print(io, i)
+            else
+                print(io, obj[i], i)
+            end
+        end
+    end
+end
+
+# Custom the display form of a sector
+function Base.show(io::IO, v::Vector{GroupElement{G}}) where {G<:Group}
+    for (i, g) in enumerate(v)
+        if i != 1
+            print(io, " ⊗ ")
+        end
+        print(io, g)
+    end
+end
+
+# 定义 BlockTensor 结构体
+struct BlockTensor{Float64, G <: Group}
+    group::G  # 表示 GroupElement 的具体类型
+    objects::Vector{Object{G}}  # 映射 group elements 到维度的向量
+    data::Dict{Vector{GroupElement{G}}, Array{Float64}}  # 主数据，键是 group elements 的向量，值是数组
+end
+
+
 # 定义构造函数
-function BlockTensor(::Type{G}, dimensions::Vector{Dict{G, Int}}) where G <: GroupElement
-    data = Dict{Vector{G}, Array{Float64}}()  # 初始化空数据字典
-    return BlockTensor{Float64, G}(G, dimensions, data)
+function BlockTensor(group::G, objects::Vector{Object{G}}) where {G<:Group}
+    data = Dict{Vector{GroupElement{G}}, Array{Float64}}()  # 初始化空数据字典
+    return BlockTensor{Float64, G}(group, objects, data)
+end
+
+# Custom display for BlockTensor
+function Base.show(io::IO, ::MIME"text/plain", bt::BlockTensor)
+    println(io, "BlockTensor with group: ", bt.group)
+    println()
+    println(io, "Dimensions: ")
+    for (i, obj_dict) in enumerate(bt.objects)
+        println(io, "  Leg $i: $obj_dict")
+    end
+    println()
+    println(io, "Blocks: ")
+    println()
+    for (key, value) in bt.data
+        println(io, "  Sector: ", key, "\n  Block:")
+        Base.show(io, MIME("text/plain"), value)
+        println()
+        println()
+    end
 end
 
 # Function to set a specific block of the tensor
-function set_block!(bt::BlockTensor{Float64, G}, key::Vector{G}, value::Array{Float64}) where {G <: GroupElement}
+function set_block!(bt::BlockTensor{Float64, G}, sector::Vector{GroupElement{G}}, value::Array{Float64}) where {G <: Group}
     # Ensure the key matches the group and dimensions are consistent
-    if length(key) != length(bt.dimensions)
-        throw(ArgumentError("The key length does not match the number of tensor legs."))
+    if length(sector) != length(bt.objects)
+        throw(ArgumentError("The sector length does not match the number of tensor legs."))
     end
-    for (i, g) in enumerate(key)
-        if !(g in keys(bt.dimensions[i]))
+
+    if multiply(sector) != identity(bt.group)
+        throw(ArgumentError("The sector multiplies to non identity."))
+    end
+
+    for (i, g) in enumerate(sector)
+        if bt.objects[i].obj[g] == 0
             throw(ArgumentError("Group element $g is not valid for leg $i."))
         end
-        expected_dim = bt.dimensions[i][g]
+        expected_dim = bt.objects[i].obj[g]
         if size(value, i) != expected_dim
             throw(ArgumentError("The size of the array along dimension $i does not match the expected dimension $expected_dim for group element $g."))
         end
     end
-    bt.data[key] = value
+    bt.data[sector] = value
+    return
 end
 
-# Function to get a block of the tensor
-function get_block(bt::BlockTensor{T, G}, key::Vector{G}) where {T, G <: GroupElement}
-    return get(bt.data, key, nothing)
-end
+# D4 = DihedralGroup(4)
+# e = GroupElement((0, 0), D4)
+# s = GroupElement((1, 0), D4)
+# r = GroupElement((0,1),D4)
+# r2 = GroupElement((0, 2), D4)
+# sr2 = s * r2
+# A = Object(Dict(e => 2, s*r => 3, s => 1, r2 => 2, sr2 => 1, r => 5), D4)
 
-# Custom display for BlockTensor
-function Base.show(io::IO, bt::BlockTensor)
-    println(io, "BlockTensor with group: ", bt.group)
-    println(io, "Dimensions: ")
-    for (i, dim_dict) in enumerate(bt.dimensions)
-        println(io, "  Leg $i:")
-        for (k, v) in dim_dict
-            println(io, "    Group element $k => Dimension $v")
-        end
-    end
-    println(io, "Blocks: ")
-    for (key, value) in bt.data
-        println(io, "  Key: ", key, " => Block: ", value)
-    end
-end
+# @show T = BlockTensor(D4, [A, A, A, A])
+
+# set_block!(T, [e, s*r, s, r], rand(2, 3, 1, 5))
+# set_block!(T, [r2, r2, s, s], rand(2,2,1,1))
+# T
+
+# x = 123
+# # Function to get a block of the tensor
+# function get_block(bt::BlockTensor{T, G}, key::Vector{G}) where {T, G <: GroupElement}
+#     return get(bt.data, key, nothing)
+# end
+
+
 
 
 

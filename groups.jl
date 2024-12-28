@@ -20,118 +20,117 @@ struct GroupElement{G<:Group}
             return new{G}(mod(value, group.n), group)
         elseif group isa DihedralGroup
             s, r = value
-            return new{G}((mod(s,2), mod(r,4)), group)
+            return new{G}((mod(s,2), mod(r,group.n)), group)
         end
         error("Unsupported group type")
     end
 end
 
-D4 = DihedralGroup(4)
-el = GroupElement((3,4), D4)
-println(el)
+function elements(group::Group)
+    if group isa CyclicGroup  # Check the instance, not the type parameter
+        return [GroupElement(i, group) for i in 0:(group.n - 1)]
+    elseif group isa DihedralGroup
+        return vec([GroupElement((s, r), group) for r in 0:(group.n - 1), s in 0:1])
+    end
+    error("Unsupported group type")
+    return 
+end
 
-# function elements(g::CyclicGroup)
-#     return [GroupElement(i, g) for i in 0:(g.n - 1)]
-# end
+function Base.show(io::IO, x::GroupElement)
+    if x isa GroupElement{DihedralGroup}
+        s, r = x.value
+        if s == 0 && r == 0
+            print(io, "e")  # 单位元显示为 e
+        elseif s == 0
+            print(io, "r^", r)  # 旋转元素显示为 r^k
+        elseif s == 1 && r == 0
+            print(io, "s")  # 反射元素显示为 s
+        else
+            print(io, "sr^", r)  # 反射+旋转显示为 sr^k
+        end
+    elseif x isa GroupElement{CyclicGroup}
+        if x.value == 0
+            print(io, "e")
+        else
+            print(io, "a^", x.value)
+        end
+    end
+end
 
+# @show elements(CyclicGroup(5))
 
+function identity(group::Group)
+    if group isa CyclicGroup
+        return GroupElement(0, group)
+    elseif group isa DihedralGroup
+        return GroupElement((0,0),group)
+    end
+    error("Unsupported group type")
+    return 
+end
 
-# # Group operations
-# identity(g::Group) = throw(NotImplementedError("Identity not defined for this group"))
-# inv(x::GroupElement) = throw(NotImplementedError("Inverse not defined for this group"))
-# *(x::GroupElement, y::GroupElement) = throw(NotImplementedError("Operation not defined for this group"))
-# elements(g::Group) = throw(NotImplementedError("Elements not defined for this group"))
+identity(DihedralGroup(3))
 
-# # Helper to verify group axioms
-# function verify_group_axioms(g::Group)
-#     elts = elements(g)
-#     println("Verifying Group Axioms for ", typeof(g))
+function inverse(x::GroupElement)
+    if x isa GroupElement{CyclicGroup}
+        return GroupElement(-x.value, x.group)
+    elseif x isa GroupElement{DihedralGroup}
+        s, r = x.value
+        return GroupElement((-s, (-1)^(s+1) * r), x.group)
+    end
+    error("Unsupported group type")
+    return 
+end
 
-#     # Identity element
-#     id = identity(g)
-#     println("Identity: ", all(x -> (x * id).value == x.value && (id * x).value == x.value, elts))
+# inverse(GroupElement((1,0), DihedralGroup(3)))
 
-#     # Associativity
-#     println("Associativity: ", all(a -> all(b -> all(c -> ((a * b) * c).value == (a * (b * c)).value, elts), elts), elts))
+function Base.:*(x::GroupElement, y::GroupElement)
+    if x.group == y.group
+        group = x.group
+        if x isa GroupElement{CyclicGroup}
+            return GroupElement(x.value + y.value, group)
+        elseif x isa GroupElement{DihedralGroup}
+            s1, r1 = x.value
+            s2, r2 = y.value
+            return GroupElement((mod(s1 + s2, 2), mod((-1)^s2 * r1 + r2, group.n)), group)
+        end
+        error("Unsupported group type")
+    end
+    error("Not allowed to multiply")
+    return 
+end
 
-#     # Inverses
-#     println("Inverses: ", all(x -> (x * inv(x)).value == id.value && (inv(x) * x).value == id.value, elts))
-# end
+function multiply(v::Vector{GroupElement{G}}) where G <: Group
+    res = v[1]
+    for j = 2 : length(v)
+        res = res * v[j]
+    end
+    return res
+end
+# x = GroupElement((3,1), DihedralGroup(4))
+# y = GroupElement((1,2), DihedralGroup(4))
+# w = GroupElement((0,1), DihedralGroup(4))
+# v = [x, y, w]
+# @show multiply(v)
 
-# ===========================================
-# Cyclic Group Zn
-# ===========================================
+# Helper to verify group axioms
+function verify_group_axioms(g::Group)
+    elts = elements(g)
+    println("Verifying Group Axioms for ", typeof(g))
 
-# struct CyclicGroup <: Group
-#     n::Int
-# end
+    # Identity element
+    id = identity(g)
+    println("Identity: ", all(x -> (x * id).value == x.value && (id * x).value == x.value, elts))
 
+    # Associativity
+    println("Associativity: ", all(a -> all(b -> all(c -> ((a * b) * c).value == (a * (b * c)).value, elts), elts), elts))
 
-# function identity(g::CyclicGroup)
-#     return GroupElement(0, g)
-# end
+    # Inverses
+    println("Inverses: ", all(x -> (x * inverse(x)).value == id.value && (inverse(x) * x).value == id.value, elts))
+end
 
-# function inv(x::GroupElement{CyclicGroup})
-#     g = x.group
-#     return GroupElement(mod(-x.value, g.n), g)
-# end
+# verify_group_axioms(DihedralGroup(5))
 
-# function Base.:*(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
-#     g = x.group
-#     @assert g === y.group "Elements must belong to the same group"
-#     return GroupElement(mod(x.value + y.value, g.n), g)
-# end
-
-# function elements(g::CyclicGroup)
-#     return [GroupElement(i, g) for i in 0:(g.n - 1)]
-# end
-
-# Z3 = CyclicGroup(3)
-# elements(Z3)
-# ===========================================
-# Dihedral Group D2n
-# ===========================================
-
-
-
-# function identity(g::DihedralGroup)
-#     return GroupElement((0, 0), g)  # (reflection, rotation)
-# end
-
-# function inv(x::GroupElement{DihedralGroup})
-#     g = x.group
-#     s, r = x.value
-#     if s == 0  # rotation
-#         return GroupElement((0, mod(-r, g.n)), g)
-#     else  # reflection
-#         return GroupElement((1, mod(r, g.n)), g)
-#     end
-# end
-
-# function Base.:*(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
-#     g = x.group
-#     @assert g === y.group "Elements must belong to the same group"
-#     (s1, r1) = x.value
-#     (s2, r2) = y.value
-#     return GroupElement((mod(s1 + s2, 2), mod((-1)^s2 * r1 + r2, g.n)), g)
-# end
-
-# function elements(g::DihedralGroup)
-#     return vec([GroupElement((s, r), g) for r in 0:(g.n - 1), s in 0:1])
-# end
-
-# function Base.show(io::IO, x::GroupElement{DihedralGroup})
-#     s, r = x.value
-#     if s == 0 && r == 0
-#         print(io, "e")  # 单位元显示为 e
-#     elseif s == 0
-#         print(io, "r^", r)  # 旋转元素显示为 r^k
-#     elseif s == 1 && r == 0
-#         print(io, "s")  # 反射元素显示为 s
-#     else
-#         print(io, "sr^", r)  # 反射+旋转显示为 sr^k
-#     end
-# end
 
 # # ===========================================
 # # Direct Product Group G x H
