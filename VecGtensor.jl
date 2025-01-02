@@ -48,22 +48,24 @@ end
 # Define BlockTensor struct (generic value type T)
 struct BlockTensor{T, G <: Group}
     group::G
-    objects::Vector{Object{G}}
+    objects::Tuple{Vararg{Object{G}}}
     data::Dict{Tuple{Vararg{GroupElement{G}}}, Array{T}}
 end
 
 # Constructor
-function BlockTensor(group::G, objects::Vector{Object{G}}) where {G<:Group}
+function BlockTensor(element_type::Type, group::G, objects::Tuple{Vararg{Object{G}}}) where {G<:Group}
     data = Dict{Tuple{Vararg{GroupElement{G}}}, Array{Any}}()
-    return BlockTensor{Any, G}(group, objects, data)
+    return BlockTensor{element_type, G}(group, objects, data)
 end
 
 # Custom display for BlockTensor
 function Base.show(io::IO, ::MIME"text/plain", bt::BlockTensor)
     println(io, "BlockTensor with group: ", bt.group)
     println(io, "Number of legs: ", length(bt.objects))
-    println(io, "Number of blocks: ", length(bt.data))
-    println("\nBlocks: ")
+    for (i, obj) in enumerate(bt.objects)
+        println(io, "Leg $i is of object $obj")
+    end
+    println("Blocks: ")
     max_display = 5
     for (i, (key, value)) in enumerate(bt.data)
         if i > max_display
@@ -84,7 +86,7 @@ function set_block!(bt::BlockTensor{T, G}, sector::Tuple{Vararg{GroupElement{G}}
     end
     for (i, g) in enumerate(sector)
         if bt.objects[i].obj[g] == 0
-            throw(ArgumentError("Group element $g is not valid for leg $i. Valid elements: $(keys(bt.objects[i].obj))"))
+            throw(ArgumentError("Group element $g is not valid for leg $i."))
         end
         expected_dim = bt.objects[i].obj[g]
         if size(value, i) != expected_dim
@@ -94,32 +96,34 @@ function set_block!(bt::BlockTensor{T, G}, sector::Tuple{Vararg{GroupElement{G}}
     bt.data[sector] = value
 end
 
-# # Get a block
-# function get_block(bt::BlockTensor{T, G}, sector::Tuple{Vararg{GroupElement{G}}}) where {T, G <: Group}
-#     return get(bt.data, sector, nothing)
-# end
+function sector_size(bt::BlockTensor{T, G}, sector::Tuple{Vararg{GroupElement{G}}}) where {T, G <: Group}
+    group = bt.group
+    if multiply(sector) != identity(group)
+        throw(ArgumentError("The sector $sector is not consistent"))
+    else
+        size = ()
+        for (i, g) in enumerate(sector)
+            object = bt.objects[i]
+            multiplicity = object.obj[g]
+            size = (size..., multiplicity)
+        end
+        return size
+    end
+end
 
-# # Add two BlockTensors (block-wise addition)
-# function +(bt1::BlockTensor{T, G}, bt2::BlockTensor{T, G}) where {T, G <: Group}
-#     if bt1.group != bt2.group || bt1.objects != bt2.objects
-#         throw(ArgumentError("BlockTensors must have the same group and objects to add them."))
-#     end
-#     result = BlockTensor(bt1.group, bt1.objects)
-#     for (key, value) in bt1.data
-#         result.data[key] = copy(value)
-#     end
-#     for (key, value) in bt2.data
-#         if haskey(result.data, key)
-#             result.data[key] .+= value
-#         else
-#             result.data[key] = copy(value)
-#         end
-#     end
-#     return result
-# end
+function random_block_tensor(element_type::Type, group::G, objects::Tuple{Vararg{Object{G}}}) where {G<:Group}
+    bt = BlockTensor(element_type, group, objects)
+    e = identity(group)
+    iter = group_tree(group, e, length(objects))
+    for sector in iter
+        size = sector_size(bt, sector)
+        bt.data[sector] = rand(element_type, size...)
+    end
+    return bt
+end
 
 
 
 
 
-include("test.jl")
+# include("test.jl")

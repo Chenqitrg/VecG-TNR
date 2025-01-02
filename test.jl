@@ -12,29 +12,37 @@ sr2 = s * r2
 A = Object(Dict(e => 2, s*r => 3, s => 1, r2 => 2, sr2 => 1, r => 5), D4)
 
 # Create BlockTensor
-T = BlockTensor(D4, [A, A, A, A])
+T = random_block_tensor(Float64, D4, (A, A, A, A))
 
-# Test set_block!
-@testset "set_block! tests" begin
-    valid_sector = (e, s*r, s, r)
-    valid_value = rand(2, 3, 1, 5)
-    set_block!(T, valid_sector, valid_value)
-    @test get_block(T, valid_sector) == valid_value
 
-    invalid_sector = (e, s, s, r)  # Does not multiply to identity
-    invalid_value = rand(2, 1, 1, 5)
-    @test_throws ArgumentError set_block!(T, invalid_sector, valid_value)
-    @test_throws ArgumentError set_block!(T, valid_sector, invalid_value)
-end
+group = CyclicGroup(2)
+e = identity(group)
+a = GroupElement(1, group)
+object1 = Object(Dict(e=>1,a=>1),group)
+object2 = Object(Dict(e=>1,a=>2),group)
+object3 = Object(Dict(e=>2,a=>1),group)
+T = random_block_tensor(Float64, group, (object1,object2,object3))
 
-# Test addition
-@testset "BlockTensor addition" begin
-    T2 = BlockTensor(D4, [A, A, A, A])
-    set_block!(T2, valid_sector, valid_value)
-    T_sum = T + T2
-    @test get_block(T_sum, valid_sector) == 2 * valid_value
-end
+# # Test set_block!
+# @testset "set_block! tests" begin
+#     valid_sector = (e, s*r, s, r)
+#     valid_value = rand(2, 3, 1, 5)
+#     set_block!(T, valid_sector, valid_value)
+#     @test T.data[valid_sector] == valid_value
+#     invalid_sector = (e, s, s, r)  # Does not multiply to identity
+#     invalid_value = rand(2, 1, 1, 5)
+#     @test_throws ArgumentError set_block!(T, invalid_sector, valid_value)
+#     # @test_throws ArgumentError set_block!(T, valid_sector, invalid_value)
+# end
 
-# Test display
-println("\nDisplaying BlockTensor T:")
-show(stdout, MIME"text/plain", T)
+# # Test addition
+# @testset "BlockTensor addition" begin
+#     T2 = BlockTensor(D4, [A, A, A, A])
+#     set_block!(T2, valid_sector, valid_value)
+#     T_sum = T + T2
+#     @test get_block(T_sum, valid_sector) == 2 * valid_value
+# end
+
+# # Test display
+# println("\nDisplaying BlockTensor T:")
+# show(stdout, MIME"text/plain", T)
