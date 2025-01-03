@@ -3,30 +3,35 @@
 # ===========================================
 using IterTools
 
-abstract type Group end
+abstract type Group{T} end
 
-struct CyclicGroup <: Group
+struct CyclicGroup <: Group{Int}
     n::Int
 end
 
-struct DihedralGroup <: Group
+struct DihedralGroup <: Group{Tuple{Int, Int}}
     n::Int
 end
 
-struct GroupElement{G<:Group, T}
-    value::T
+# 辅助函数，用于获取 Group 的值类型
+Base.eltype(::Type{<:CyclicGroup}) = Int
+Base.eltype(::Type{<:DihedralGroup}) = Tuple{Int, Int}
+
+# 群元素定义
+struct GroupElement{G<:Group}
+    value::eltype(G)  # 自动根据 Group 类型推断 value 的类型
     group::G
 end
 
+
 # 群元素构造函数，支持循环群和二面体群
-function GroupElement(value::Any, group::G) where {G<:Group}
-    if group isa CyclicGroup
-        return GroupElement{G, Int}(mod(value, group.n), group)
-    elseif group isa DihedralGroup
-        s, r = value
-        return GroupElement{G, Tuple{Int, Int}}((mod(s, 2), mod(r, group.n)), group)
-    end
-    error("Unsupported group type")
+function GroupElement(value::Any, group::CyclicGroup)
+    return GroupElement{CyclicGroup}(mod(value, group.n), group) 
+end
+
+function GroupElement(value::Tuple, group::DihedralGroup)
+    s, r = value
+    return GroupElement{DihedralGroup}((mod(s, 2), mod(r, group.n)), group)
 end
 
 # ===========================================
@@ -55,11 +60,11 @@ function identity(group::DihedralGroup)
 end
 
 # 逆元
-function inverse(x::GroupElement{CyclicGroup, Int})
+function inverse(x::GroupElement{CyclicGroup})
     return GroupElement(-x.value, x.group)
 end
 
-function inverse(x::GroupElement{DihedralGroup, Tuple{Int, Int}})
+function inverse(x::GroupElement{DihedralGroup})
     s, r = x.value
     return GroupElement((-s, (-1)^(s + 1) * r), x.group)
 end
@@ -73,13 +78,13 @@ function Base.:*(x::GroupElement, y::GroupElement)
 end
 
 # 循环群的乘法
-function group_multiply(x::GroupElement{CyclicGroup, Int}, y::GroupElement{CyclicGroup, Int})
+function group_multiply(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
     group = x.group
     return GroupElement(x.value + y.value, group)
 end
 
 # 二面体群的乘法
-function group_multiply(x::GroupElement{DihedralGroup, Tuple{Int, Int}}, y::GroupElement{DihedralGroup, Tuple{Int, Int}})
+function group_multiply(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
     group = x.group
     s1, r1 = x.value
     s2, r2 = y.value
@@ -97,14 +102,15 @@ function multiply(elements::Tuple{Vararg{GroupElement}})
     return result
 end
 
-function group_tree(group::G, g::GroupElement{G}, n::Int) where G<:Group
+function group_tree(g::GroupElement, n::Int)
     if n < 1
         error("Invalid length of the tuple")
     elseif n == 1
         return (g,)
     else
+        group = g.group  # 从 g 中推断所属群
         elem = elements(group)
-        tup = IterTools.product((elem for _ in 1:(n-1))...)
+        tup = IterTools.product((elem for _ in 1:(n - 1))...)
         return Iterators.map(x -> (x..., inverse(inverse(g) * multiply(x))), tup)
     end
 end
@@ -114,7 +120,7 @@ end
 # ===========================================
 
 # 群元素的显示函数
-function Base.show(io::IO, x::GroupElement{CyclicGroup, Int})
+function Base.show(io::IO, x::GroupElement{CyclicGroup})
     if x.value == 0
         print(io, "e")
     elseif x.value == 1
@@ -124,7 +130,7 @@ function Base.show(io::IO, x::GroupElement{CyclicGroup, Int})
     end
 end
 
-function Base.show(io::IO, x::GroupElement{DihedralGroup, Tuple{Int, Int}})
+function Base.show(io::IO, x::GroupElement{DihedralGroup})
     s, r = x.value
     if s == 0 && r == 0
         print(io, "e")
