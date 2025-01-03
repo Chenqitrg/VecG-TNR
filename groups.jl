@@ -94,12 +94,16 @@ end
 function multiply(elements::Tuple{Vararg{GroupElement}})
     if length(elements) == 0
         error("Cannot multiply an empty tuple of group elements")
+    elseif length(elements) == 1
+        return elements[1]
+    else
+        result = elements[1]
+        for i in 2:length(elements)
+            result *= elements[i]
+        end
+        return result
     end
-    result = elements[1]
-    for i in 2:length(elements)
-        result *= elements[i]
-    end
-    return result
+
 end
 
 function group_tree(g::GroupElement, n::Int)
