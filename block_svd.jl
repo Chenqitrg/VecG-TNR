@@ -37,6 +37,9 @@ end
 
 function block_factorize(bt::BlockTensor{T, G}, n_leg_split::Int, Dcut::Int, method::AbstractString) where {T, G <: Group}
     group = bt.group
-    
+    Fobj = bt.objects[1:n_leg_split]
+    Kobj = bt.objects[n_leg_split+1:end]
+    typ = typeof(bt.objects[1].obj)
+    bridgeobj = Object(typ(), group)
 end
 
