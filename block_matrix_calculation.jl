@@ -47,7 +47,7 @@ function factorize_block_matrix(
     matrices::AbstractMatrix{<:AbstractMatrix}, 
     method::AbstractString, 
     Dc::Integer
-)::Tuple{Vector{AbstractMatrix}, Vector{AbstractMatrix}}
+)
     # Validate inputs
     if !(method in ["svd", "qr"])
         error("Unsupported method. Use \"svd\" or \"qr\".")
@@ -65,15 +65,18 @@ function factorize_block_matrix(
 
     # Perform matrix factorization
     F, K = [], []  # Initialize factorized matrices
-    if method == "svd"
+    if 0 in size(matrices_big)
+        println("p")
+        return undef, undef
+    elseif method == "svd"
         U, S, V = svd(matrices_big)
         trunc_dim = min(length(S), Dc)
         S_trunc_sqrt = sqrt.(S[1:trunc_dim])
         F = U[:, 1:trunc_dim] * diagm(S_trunc_sqrt)
         K = V[:, 1:trunc_dim] * diagm(S_trunc_sqrt)
-    else  # method == "qr"
-        Q, R = qr(matrices_big)
-        F, K = Q, R'
+    elseif method == "qr"
+            Q, R = qr(matrices_big)
+            F, K = Q, R'
     end
 
     # Split F into block rows according to r_sizes
