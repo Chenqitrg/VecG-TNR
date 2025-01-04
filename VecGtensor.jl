@@ -111,14 +111,19 @@ end
 
 
 # Get the object of the leg within the range
-function Base.getindex(T::Mor, range::UnitRange{Int})
-    return T.objects[range]
+function Base.getindex(mor::Mor, range::UnitRange{Int})
+    return mor.objects[range]
 end
 
 # Get the tensor of the g... sector
-function Base.getindex(T::Mor, g::GroupElement...)
+function Base.getindex(mor::Mor, g::GroupElement...)
     S = Sector(g)
-    return T.data[S]
+    return mor.data[S]
+end
+
+# Get the tensor of the S sector
+function Base.getindex(mor::Mor{G, T}, S::Sector{G}) where {T, G<:Group}
+    return mor.data[S]
 end
 
 # Get the size of a morphism at a given sector
@@ -158,4 +163,14 @@ function Base.setindex!(mor::Mor{G, T}, value::Array{T}, g::GroupElement{G}...) 
         throw(ArgumentError("Data size $data_size does not match sector size $terminal_size"))
     end
     mor.data[Sector(g)] = value
+end
+
+# Set a specific sector
+function Base.setindex!(mor::Mor{G, T}, value::Array{T}, S::Sector{G}) where {T, G <: Group}
+    terminal_size = get_sector_size(mor, S)
+    data_size = size(value)
+    if terminal_size != data_size
+        throw(ArgumentError("Data size $data_size does not match sector size $terminal_size"))
+    end
+    mor.data[S] = value
 end

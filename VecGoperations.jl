@@ -45,7 +45,6 @@ function VecG_factorize(mor::Mor{G, T}, n_leg_split::Int, Dcut::Int, method::Abs
     for g_bridge in elements(group)
         block_matrix = extract_blocks_to_matrix(mor, n_leg_split, g_bridge)
         F_mat, K_mat = factorize_block_matrix(block_matrix, method, Dcut)
-        println("pp")
         if F_mat == undef || K_mat == undef
             F[end][inverse(g_bridge)] = 0
             K[end][g_bridge] = 0
@@ -74,15 +73,48 @@ function VecG_factorize(mor::Mor{G, T}, n_leg_split::Int, Dcut::Int, method::Abs
     return F, K
 end
 
+function VecG_permutesectors(sect::Sector, perm::Tuple{Vararg{Int}})
+    perm_sect_tup = ()
+    for i in perm
+        perm_sect_tup = (perm_sect_tup..., sect[i])
+    end
+    return Sector(perm_sect_tup...)
+end
 
-D4 = DihedralGroup(4)
-s = GroupElement((1,0),D4)
-r = GroupElement((0,1),D4)
-e = identity(D4)
-A = Obj(e=>2, s=>2, r=>3)
-B = Obj(e=>2, s*r=>3, s=>4)
-get_group(A)
-zero_obj(D4)
+function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<:Group}
+    perm_obj = ()
+    for perm_i in perm
+        perm_obj = (perm_obj..., mor[perm_i])
+    end
+    perm_mor = Mor(T, perm_obj)
+    for sect in keys(mor.data)
+        perm_sect = VecG_permutesectors(sect, perm)
+        perm_tensor = permutedims(mor[sect], perm)
+        perm_mor[perm_sect] = perm_tensor
+    end
+    return perm_mor
+end
 
-T = random_mor(Float64, (A, A, B, B))
-F, K = VecG_factorize(T, 2, 10, "qr")
+function VecG_contraction(mor1::Mor{G,T}, mor2::Mor{G,T}, method::AbstractString)
+    if method == "tree"
+        
+    elseif method == "loop"
+    end
+end
+
+# D4 = DihedralGroup(4)
+# s = GroupElement((1,0),D4)
+# r = GroupElement((0,1),D4)
+# e = identity(D4)
+# A = Obj(e=>2, s=>2, r=>3)
+# B = Obj(e=>2, s*r=>3, s=>4)
+# get_group(A)
+# zero_obj(D4)
+
+# T = random_mor(Float64, (A, A, B, B))
+# F, K = VecG_factorize(T, 2, 10, "qr")
+
+# sect = Sector(e, s, r, s*r)
+# VecGpermutesectors(sect, (3,4,1,2))
+
+# VecGpermutedims(T, (2,3,4,1))
