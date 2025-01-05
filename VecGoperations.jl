@@ -73,7 +73,41 @@ function VecG_factorize(mor::Mor{G, T}, n_leg_split::Int, Dcut::Int, method::Abs
     return F, K
 end
 
+
+
+
+function is_accend(tup::Tuple{Vararg{Int}}, modn::Int)
+    test = true
+    for i = 1 : length(tup)-1
+        if !(tup[i] in 1:modn) || !(tup[i+1] in 1:modn) || tup[i+1] != (mod(tup[i], modn) + 1)
+            test = false
+        end
+    end
+    return test
+end
+
+function is_cyclic(tup::Tuple{Vararg{Int}}, modn::Int)
+    test = is_accend(tup, modn)
+    if tup[1]!=(mod(tup[end], modn) + 1)
+        test = false
+    end
+    return test
+end
+
+function to_perm(tup::Tuple{Vararg{Int}}, modn::Int)
+    if !is_accend(tup, modn)
+        throw(Argumenterror("The $tup is not in an accending order"))
+    end
+    newtup = tup[1]:tup[1]+modn-1
+    mod_newtup = Tuple(map(x->mod(x-1,modn)+1, newtup))
+    return mod_newtup
+end
+
 function VecG_permutesectors(sect::Sector, perm::Tuple{Vararg{Int}})
+    modn = length(sect.sect)
+    if is_cyclic(perm, modn) == false
+        throw(ArgumentError("The permutation $perm is not cyclic"))
+    end
     perm_sect_tup = ()
     for i in perm
         perm_sect_tup = (perm_sect_tup..., sect[i])
@@ -82,6 +116,10 @@ function VecG_permutesectors(sect::Sector, perm::Tuple{Vararg{Int}})
 end
 
 function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<:Group}
+    modn = length(mor.objects)
+    if is_cyclic(perm, modn) == false
+        throw(ArgumentError("The permutation $perm is not cyclic"))
+    end
     perm_obj = ()
     for perm_i in perm
         perm_obj = (perm_obj..., mor[perm_i])
@@ -95,26 +133,43 @@ function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<
     return perm_mor
 end
 
-function VecG_contraction(mor1::Mor{G,T}, mor2::Mor{G,T}, method::AbstractString)
-    if method == "tree"
-        
-    elseif method == "loop"
+function VecG_factorize(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int, method::AbstractString)
+    modn = length(mor.objects)
+    if is_accend(n_leg_split, modn) == false
+        throw(ArgumentError("The factorize leg $n_leg_split is not accending"))
     end
+
+    perm = to_perm(n_leg_split, modn)
+    perm_mor = VecG_permutedims(mor, perm)
+
+    F, K = VecG_factorize(perm_mor, length(n_leg_split), Dcut, method)
+
+    return F, K
 end
 
-# D4 = DihedralGroup(4)
-# s = GroupElement((1,0),D4)
-# r = GroupElement((0,1),D4)
-# e = identity(D4)
-# A = Obj(e=>2, s=>2, r=>3)
-# B = Obj(e=>2, s*r=>3, s=>4)
+
+function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, A_cont::Vector{Int}, B_cont::Vector{Int}) where {T, G<:Group}
+    A_legs = length(A.objects)
+    B_legs = length(B.objects)
+
+end
+
+D4 = DihedralGroup(4)
+s = GroupElement((1,0),D4)
+r = GroupElement((0,1),D4)
+e = identity(D4)
+A = Obj(e=>2, s=>2, r=>3)
+B = Obj(e=>2, s*r=>3, s=>4)
 # get_group(A)
 # zero_obj(D4)
 
-# T = random_mor(Float64, (A, A, B, B))
+T = random_mor(Float64, (A, A, B, B))
 # F, K = VecG_factorize(T, 2, 10, "qr")
 
 # sect = Sector(e, s, r, s*r)
 # VecGpermutesectors(sect, (3,4,1,2))
 
 # VecGpermutedims(T, (2,3,4,1))
+
+F1, K1 = VecG_factorize(T, (1,2), 20, "svd")
+F2, K2 = VecG_factorize(T, (2,3), 20, "svd")
