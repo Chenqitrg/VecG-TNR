@@ -103,7 +103,14 @@ function multiply(elements::Tuple{Vararg{GroupElement}})
         end
         return result
     end
+end
 
+function Base.:(==)(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
+    return x.value == y.value
+end
+
+function Base.:(==)(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
+    return x.value == y.value
 end
 
 function group_tree(g::GroupElement, n::Int)

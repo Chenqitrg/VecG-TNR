@@ -148,10 +148,19 @@ function VecG_factorize(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int, me
 end
 
 
-function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, A_cont::Vector{Int}, B_cont::Vector{Int}) where {T, G<:Group}
+function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Group}
     A_legs = length(A.objects)
     B_legs = length(B.objects)
 
+    for i in 1:n
+        if A[end-i+1]!=B[i]
+            throw(ArgumentError("Contract index is illegal"))
+        end
+    end
+
+    newobjs = (A[1:A_legs -leg_cont]..., B[leg_cont+1:B_legs])
+
+    Cont = Mor(T, newobjs)
 end
 
 D4 = DihedralGroup(4)

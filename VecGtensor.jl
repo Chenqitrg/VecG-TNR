@@ -1,3 +1,5 @@
+# include("groups.jl")
+# include("display.jl")
 abstract type UFC end
 abstract type PointedCat <: UFC end
 
@@ -59,6 +61,19 @@ function zero_obj(group::G) where G<:Group
         sumd[g] = 0
     end
     return Obj(sumd)
+end
+
+function dual_obj(obj::Obj{G}) where G<:Group
+    dualobj = Dict{GroupElement{G}, Int}()
+    dict = obj.sumd
+    for g in keys(dict)
+        dualobj[g] = dict[inverse(g)]
+    end
+    return Obj(dualobj)
+end
+
+function Base.:(==)(X::Obj{G}, Y::Obj{G}) where G<:Group
+    return X.sumd == Y.sumd
 end
 
 # Construct a random morphism for a given objects
