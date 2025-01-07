@@ -1,7 +1,7 @@
-include("groups.jl")
-include("block_matrix_calculation.jl")
-include("VecGtensor.jl")
-include("display.jl")
+# include("groups.jl")
+# include("block_matrix_calculation.jl")
+# include("VecGtensor.jl")
+# include("display.jl")
 
 function extract_blocks_to_matrix(mor::Mor{G, T}, n_leg_split::Int, g_bridge::GroupElement{G}) where {T, G <: Group} # legs split as 1, ..., n-1, n, |, n+1, n+2, ...
     n_leg = length(mor.objects)
@@ -35,42 +35,58 @@ function extract_blocks_to_matrix(mor::Mor{G, T}, n_leg_split::Int, g_bridge::Gr
     return A_blocks
 end
 
-function VecG_factorize(mor::Mor{G, T}, n_leg_split::Int, Dcut::Int, method::AbstractString) where {T, G<:Group}
+function VecG_svd(mor::Mor{G, T}, n_leg_split::Int) where {T, G<:Group}
     group = get_group(mor)
     n_leg = length(mor.objects)
-    Fobj = (mor[1:n_leg_split]...,zero_obj(group))
-    Kobj = (mor[n_leg_split+1:end]...,zero_obj(group))
-    F = Mor(T, Fobj)
-    K = Mor(T, Kobj)
+    U = Mor(T, (mor[1:n_leg_split]...,zero_obj(group)))
+    V = Mor(T, (mor[n_leg_split+1:end]...,zero_obj(group)))
+    S = Mor(T, (zero_obj(group),zero_obj(group)))
     for g_bridge in elements(group)
         block_matrix = extract_blocks_to_matrix(mor, n_leg_split, g_bridge)
-        F_mat, K_mat = factorize_block_matrix(block_matrix, method, Dcut)
-        if F_mat == undef || K_mat == undef
-            F[end][inverse(g_bridge)] = 0
-            K[end][g_bridge] = 0
-            out_sectors = group_tree(g_bridge, n_leg_split)
-            in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
-            for out_sector in out_sectors
-                F[out_sector..., inverse(g_bridge)] = zeros(get_sector_size(F, (out_sector..., inverse(g_bridge)))...)
-            end
-            for in_sector in in_sectors
-                K[in_sector..., g_bridge] = zeros(get_sector_size(K, (in_sector..., g_bridge))...)
-            end
-        else
-            multiplicity = size(F_mat[1],2)
-            F[end][inverse(g_bridge)] = multiplicity
-            K[end][g_bridge] = multiplicity
-            out_sectors = group_tree(g_bridge, n_leg_split)
-            in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
-            for (i,out_sector) in enumerate(out_sectors)
-                F[out_sector..., inverse(g_bridge)] = reshape(F_mat[i], get_sector_size(F, (out_sector..., inverse(g_bridge))))
-            end
-            for (j,in_sector) in enumerate(in_sectors)
-                K[in_sector..., g_bridge] = reshape(K_mat[j], get_sector_size(K, (in_sector..., g_bridge)))
-            end
+        U_mat, S_vec, V_mat = factorize_block_matrix(block_matrix, "svd")
+        multiplicity = length(S_vec)
+        U[end][inverse(g_bridge)] = multiplicity
+        V[end][g_bridge] = multiplicity
+        S[1][g_bridge] = multiplicity
+        S[2][inverse(g_bridge)] = multiplicity
+        out_sectors = group_tree(g_bridge, n_leg_split)
+        in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
+        for (i,out_sector) in enumerate(out_sectors)
+            U[out_sector..., inverse(g_bridge)] = reshape(U_mat[i], get_sector_size(U, (out_sector..., inverse(g_bridge))))
         end
+        for (j,in_sector) in enumerate(in_sectors)
+            V[in_sector..., g_bridge] = reshape(V_mat[j], get_sector_size(V, (in_sector..., g_bridge)))
+        end
+        S[g_bridge,inverse(g_bridge)] = diagm(S_vec)
     end
-    return F, K
+
+    return U, S, V
+    #     if F_mat == undef || K_mat == undef
+    #         F[end][inverse(g_bridge)] = 0
+    #         K[end][g_bridge] = 0
+    #         out_sectors = group_tree(g_bridge, n_leg_split)
+    #         in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
+    #         for out_sector in out_sectors
+    #             F[out_sector..., inverse(g_bridge)] = zeros(get_sector_size(F, (out_sector..., inverse(g_bridge)))...)
+    #         end
+    #         for in_sector in in_sectors
+    #             K[in_sector..., g_bridge] = zeros(get_sector_size(K, (in_sector..., g_bridge))...)
+    #         end
+    #     else
+    #         multiplicity = size(F_mat[1],2)
+    #         F[end][inverse(g_bridge)] = multiplicity
+    #         K[end][g_bridge] = multiplicity
+    #         out_sectors = group_tree(g_bridge, n_leg_split)
+    #         in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
+    #         for (i,out_sector) in enumerate(out_sectors)
+    #             F[out_sector..., inverse(g_bridge)] = reshape(F_mat[i], get_sector_size(F, (out_sector..., inverse(g_bridge))))
+    #         end
+    #         for (j,in_sector) in enumerate(in_sectors)
+    #             K[in_sector..., g_bridge] = reshape(K_mat[j], get_sector_size(K, (in_sector..., g_bridge)))
+    #         end
+    #     end
+    # end
+    # return F, K
 end
 
 
@@ -153,8 +169,8 @@ function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Gr
     B_legs = length(B.objects)
 
     for i in 1:n
-        if A[end-i+1]!=B[i]
-            throw(ArgumentError("Contract index is illegal"))
+        if A[end-i+1]!=dual_obj(B[i])
+            throw(ArgumentError("Contracted object $(A[end-i+1]) is not the dual of $(B[i])"))
         end
     end
 
@@ -163,22 +179,22 @@ function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Gr
     Cont = Mor(T, newobjs)
 end
 
-D4 = DihedralGroup(4)
-s = GroupElement((1,0),D4)
-r = GroupElement((0,1),D4)
-e = identity(D4)
-A = Obj(e=>2, s=>2, r=>3)
-B = Obj(e=>2, s*r=>3, s=>4)
-# get_group(A)
-# zero_obj(D4)
+# D4 = DihedralGroup(4)
+# s = GroupElement((1,0),D4)
+# r = GroupElement((0,1),D4)
+# e = identity(D4)
+# A = Obj(e=>2, s=>2, r=>3)
+# B = Obj(e=>2, s*r=>3, s=>4)
+# # get_group(A)
+# # zero_obj(D4)
 
-T = random_mor(Float64, (A, A, B, B))
-# F, K = VecG_factorize(T, 2, 10, "qr")
+# T = random_mor(Float64, (A, A, B, B))
+# # F, K = VecG_factorize(T, 2, 10, "qr")
 
-# sect = Sector(e, s, r, s*r)
-# VecGpermutesectors(sect, (3,4,1,2))
+# # sect = Sector(e, s, r, s*r)
+# # VecGpermutesectors(sect, (3,4,1,2))
 
-# VecGpermutedims(T, (2,3,4,1))
+# # VecGpermutedims(T, (2,3,4,1))
 
-F1, K1 = VecG_factorize(T, (1,2), 20, "svd")
-F2, K2 = VecG_factorize(T, (2,3), 20, "svd")
+# F1, K1 = VecG_factorize(T, (1,2), 20, "svd")
+# F2, K2 = VecG_factorize(T, (2,3), 20, "svd")

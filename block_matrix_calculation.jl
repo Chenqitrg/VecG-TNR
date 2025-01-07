@@ -45,15 +45,11 @@ end
 
 function factorize_block_matrix(
     matrices::AbstractMatrix{<:AbstractMatrix}, 
-    method::AbstractString, 
-    Dc::Integer
+    method::AbstractString
 )
     # Validate inputs
     if !(method in ["svd", "qr"])
         error("Unsupported method. Use \"svd\" or \"qr\".")
-    end
-    if Dc <= 0
-        error("Dc must be a positive integer.")
     end
 
     # Extract row sizes and column sizes for the block structure
@@ -64,39 +60,47 @@ function factorize_block_matrix(
     matrices_big, _ = concatenate_matrices_with_metadata(matrices)
 
     # Perform matrix factorization
-    F, K = [], []  # Initialize factorized matrices
     if 0 in size(matrices_big)
-        println("p")
         return undef, undef
     elseif method == "svd"
         U, S, V = svd(matrices_big)
-        trunc_dim = min(length(S), Dc)
-        S_trunc_sqrt = sqrt.(S[1:trunc_dim])
-        F = U[:, 1:trunc_dim] * diagm(S_trunc_sqrt)
-        K = V[:, 1:trunc_dim] * diagm(S_trunc_sqrt)
+        # Split F into block rows according to r_sizes
+        U_blocks = Vector{AbstractMatrix}(undef, length(r_sizes))
+        row_start = 1
+        for (i, r) in enumerate(r_sizes)
+            U_blocks[i] = U[row_start:row_start + r - 1, :]
+            row_start += r
+        end
+        # Split K into block columns according to c_sizes
+        V_blocks = Vector{AbstractMatrix}(undef, length(c_sizes))
+        col_start = 1
+        for (j, c) in enumerate(c_sizes)
+            V_blocks[j] = V[col_start:col_start + c - 1, :]
+            col_start += c
+        end
+        return U_blocks, S, V_blocks
     elseif method == "qr"
-            Q, R = qr(matrices_big)
-            F, K = Q, R'
-    end
+        Q, R = qr(matrices_big)
+        F, K = Q, R'
+        # Split F into block rows according to r_sizes
+        F_blocks = Vector{AbstractMatrix}(undef, length(r_sizes))
+        row_start = 1
+        for (i, r) in enumerate(r_sizes)
+            F_blocks[i] = F[row_start:row_start + r - 1, :]
+            row_start += r
+        end
 
-    # Split F into block rows according to r_sizes
-    F_blocks = Vector{AbstractMatrix}(undef, length(r_sizes))
-    row_start = 1
-    for (i, r) in enumerate(r_sizes)
-        F_blocks[i] = F[row_start:row_start + r - 1, :]
-        row_start += r
-    end
+        # Split K into block columns according to c_sizes
+        K_blocks = Vector{AbstractMatrix}(undef, length(c_sizes))
+        col_start = 1
+        for (j, c) in enumerate(c_sizes)
+            K_blocks[j] = K[col_start:col_start + c - 1, :]
+            col_start += c
+        end
 
-    # Split K into block columns according to c_sizes
-    K_blocks = Vector{AbstractMatrix}(undef, length(c_sizes))
-    col_start = 1
-    for (j, c) in enumerate(c_sizes)
-        K_blocks[j] = K[col_start:col_start + c - 1, :]
-        col_start += c
+        # Return the block matrices F and K
+        return F_blocks, K_blocks
     end
-
-    # Return the block matrices F and K
-    return F_blocks, K_blocks
 end
 
 # Define submatrices
@@ -114,7 +118,7 @@ matrices[2, 2] = D
 
 # # Call the function
 # big_matrix, metadata = concatenate_matrices_with_metadata(matrices)
-F, K = factorize_block_matrix(matrices, "svd", 3)
+U,S,V = factorize_block_matrix(matrices, "svd")
 
 # # Outputs
 # println("Big Matrix:")

@@ -29,14 +29,14 @@ function check_Z2()
         mor[Z2(x), Z2(y), Z2(z), Z2(w)] = reshape([T[i=>x, j=>y, k=>z, l=>w]], 1,1,1,1)
     end
 
-    f1, k1 = factorize(T, (i, j); which_decomp = "svd", ortho = "none")
-    P1, Q1 = VecG_factorize(mor, 2, 4, "svd")
+    u, s, v = svd(T, (i, j))
+    U, S, V = VecG_svd(mor, 2)
 
-    f2, k2 = factorize(T, (j, k); which_decomp = "svd", ortho = "none")
-    perm_mor = VecG_permutedims(mor, (2,3,4,1))
-    P2, Q2 = VecG_factorize(perm_mor, 2, 4, "svd")
+    # f2, k2 = factorize(T, (j, k); which_decomp = "svd", ortho = "none")
+    # perm_mor = VecG_permutedims(mor, (2,3,4,1))
+    # P2, Q2 = VecG_factorize(perm_mor, 2, 4, "svd")
 
-    return f1, k1, P1, Q1, f2, k2, P2, Q2
+    return u, s, v, U, S, V
 end
 
 function check_Z3()
@@ -76,13 +76,15 @@ function check_Z3()
     return f1, k1, i, j, ind_fact, P1, Q1, i, j
 end
 
-Z3(i::Int) = GroupElement(i, CyclicGroup(3))
-e = Z3(0)
-a = Z3(1)
-a2 = Z3(2)
-f1, k1, i, j, ind_fact, P1, Q1 = check_Z3()
+Z2(i::Int) = GroupElement(i, CyclicGroup(2))
+e = Z2(0)
+a = Z2(1)
+# a2 = Z3(2)
+# f1, k1, i, j, ind_fact, P1, Q1 = check_Z3()
 
-f1_array = array(f1, i, j,ind_fact)
+# f1_array = array(f1, i, j,ind_fact)
 
-f1_array[1,1:2,1]
-P1[e,e,e]
+# f1_array[1,1:2,1]
+# P1[e,e,e]
+
+u,s,v, U,S,V=check_Z2()
