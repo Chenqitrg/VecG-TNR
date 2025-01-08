@@ -117,7 +117,7 @@ function group_tree(g::GroupElement, n::Int)
     if n < 1
         error("Invalid length of the tuple")
     elseif n == 1
-        return (g,)
+        return ((g,),)
     else
         group = g.group  # 从 g 中推断所属群
         elem = elements(group)

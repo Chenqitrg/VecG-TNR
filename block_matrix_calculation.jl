@@ -79,6 +79,8 @@ function block_matrix_qr(matrices::AbstractMatrix{<:AbstractMatrix})
     # Concatenate input block matrices into a single large matrix
     matrices_big, _ = concatenate_matrices_with_metadata(matrices)
     Q, R = qr(matrices_big)
+    Rrow = size(R,1)
+    Q = Q[:,1:Rrow]
     # Split F into block rows according to r_sizes
     Q_blocks = Vector{AbstractMatrix}(undef, length(r_sizes))
     row_start = 1
