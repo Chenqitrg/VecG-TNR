@@ -1,6 +1,6 @@
-# include("groups.jl")
-# include("VecGtensor.jl")
-# include("display.jl")
+include("groups.jl")
+include("VecGtensor.jl")
+include("display.jl")
 using LinearAlgebra
 function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Group}
     A_legs = length(A.objects)
@@ -45,6 +45,37 @@ function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Gr
     return Cont
 end
 
+function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, A_cont::Tuple{Vararg{Int}}, B_cont::Tuple{Vararg{Int}}) where {T, G<:Group}
+    dimA = length(A.objects)
+    dimB = length(B.objects)
+    if !(is_accend(A_cont, dimA)&&is_accend(B_cont, dimB)) || length(A_cont)!=length(B_cont)
+        throw(ArgumentError("The contraction indices $A_cont and $B_cont are illegal"))
+    end
+    leg_cont = length(A_cont)
+
+    A_perm = (A_cont[end]-dimA+1):A_cont[end]
+    A_perm = Tuple(map(x->mod(x-1,dimA)+1, A_perm))
+    B_perm = to_perm(B_cont, dimB)
+
+    newA = VecG_permutedims(A, A_perm)
+    newB = VecG_permutedims(B, B_perm)
+
+    return VecG_tensordot(newA, newB, leg_cont)
+end
+
+
+function VecG_factorize(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int)
+    U, S, V = VecG_svd(mor, n_leg_split, Dcut)
+    group = get_group(S)
+    for k in elements(group)
+        S[k, inverse(k)] = sqrt.(S[k, inverse(k)])
+    end
+
+    F = VecG_tensordot(U, S, 1)
+    K = VecG_tensordot(V, VecG_permutedims(S, (1,2)), 1)
+    
+    return F, K
+end
 # Z4 = CyclicGroup(4)
 # e = GroupElement(0, Z4)
 # a = GroupElement(1, Z4)
@@ -56,6 +87,7 @@ end
 # B_dual = dual_obj(B)
 
 # T1 = random_mor(Float64, (A,B,A,B))
-# T2 = random_mor(Float64, (B_dual, A_dual, A,B))
+# T2 = random_mor(Float64, (B_dual, A_dual, B_dual,B))
 
-# T = VecG_tensordot(T1, T2, 2)
+# # T = VecG_tensordot(T1, T2, 2)
+# Tp = VecG_tensordot(T1, T2, (2,3), (2,3))

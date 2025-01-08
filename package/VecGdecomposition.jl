@@ -77,10 +77,10 @@ function VecG_cutoff(U::Mor{G,T}, S::Mor{G,T}, V::Mor{G,T}, Dcut::Int) where {T,
     S_tot_vcat = vcat(S_tot)
     
     sorted_singular_values = sort(S_tot, rev=true)  # 从大到小排序
-    cutoff_threshold = sorted_singular_values[Dcut]
+    cutoff = min(Dcut, length(S_tot_vcat))
+    cutoff_threshold = sorted_singular_values[cutoff]
 
     for g in elements(group)
-        @show g
         for out_sect in group_tree(g, out_legs), in_sect in group_tree(inverse(g), in_legs)
             Dcut_sect = sum(diag(S[g, inverse(g)]) .>= cutoff_threshold)
             U_indices = ntuple(_ -> :, out_legs)
@@ -140,3 +140,18 @@ function VecG_svd(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int)
 
     return U, S, V
 end
+
+function VecG_qr(mor::Mor, n_leg_split::Tuple{Vararg{Int}})
+    modn = length(mor.objects)
+    if is_accend(n_leg_split, modn) == false
+        throw(ArgumentError("The factorize leg $n_leg_split is not accending"))
+    end
+
+    perm = to_perm(n_leg_split, modn)
+    perm_mor = VecG_permutedims(mor, perm)
+
+    Q, R = VecG_qr(perm_mor, length(n_leg_split))
+
+    return Q, R
+end
+

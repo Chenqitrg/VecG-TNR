@@ -1,4 +1,3 @@
-function RG(T::BlockTensor, Dcut::Int, n::Int)
-    T_fix = T
-    return T_fix
+function entanglement_filtering(mor::Mor)
+    return morA, morB
 end

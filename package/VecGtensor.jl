@@ -91,6 +91,18 @@ function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     return mor
 end
 
+function identity_mor(element_type::Type, object::Obj)
+    dual = dual_obj(object)
+    group = get_group(object)
+    delta = Mor(element_type, (object, dual))
+    for g in elements(group)
+        sect = get_sector_size(delta, (g, inverse(g)))
+        delta[g, inverse(g)] = Matrix{element_type}(I, sect...)
+    end
+
+    return delta
+end
+
 # Get the group that the object belongs to
 function get_group(ob::Obj)
     return first(keys(ob.sumd)).group
@@ -195,6 +207,16 @@ function is_accend(tup::Tuple{Vararg{Int}}, modn::Int)
     test = true
     for i = 1 : length(tup)-1
         if !(tup[i] in 1:modn) || !(tup[i+1] in 1:modn) || tup[i+1] != (mod(tup[i], modn) + 1)
+            test = false
+        end
+    end
+    return test
+end
+
+function is_decend(tup::Tuple{Vararg{Int}}, modn::Int)
+    test = true
+    for i = 1 : length(tup)-1
+        if !(tup[i] in 1:modn) || !(tup[i+1] in 1:modn) || tup[i+1] != (mod(tup[i], modn) - 1)
             test = false
         end
     end

@@ -180,3 +180,7 @@ Z3 = CyclicGroup(3)
 e = GroupElement(0, Z3)
 a = GroupElement(1, Z3)
 mor, mor_p = check_Z3_contract()
+
+A = Obj(e=>1, a=>1, a*a=>2)
+
+T = identity_mor(Float64, A)
