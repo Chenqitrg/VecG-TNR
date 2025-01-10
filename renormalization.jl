@@ -18,6 +18,11 @@ function single_step_LQ(mor::Mor{G,T}, R::Mor{G, T}, leg::Int)  where {T,G<:Grou
     return newR
 end
 
+function to_projector(L::Mor{G, T}, R::Mor{G, T}, epsilon::Float64) where {T, G<:Group}
+    LR = VecG_tensordot(L, R, (2,), (2,))
+    U, S, V = VecG_svd(LR, (1,), epsilon)
+    PR = 
+end
 #       |
 #       2
 #       |
@@ -25,6 +30,7 @@ end
 #       |
 #       4
 #       |
+
 
 function entanglement_filtering(morA::Mor{G, T}, morB::Mor{G, T}, N_ef::Int, epsilon::Float64) where {T, G<:Group}
     obL1 = morA[1]
@@ -65,5 +71,7 @@ function entanglement_filtering(morA::Mor{G, T}, morB::Mor{G, T}, N_ef::Int, eps
         R4 = R4 ./ Omega
     end
     
+
+
     return newA, newB
 end
