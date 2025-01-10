@@ -99,9 +99,27 @@ function check_Z3_svd()
         mor[tup...] = arr[range1[tup[1]], range2[tup[2]], range3[tup[3]], range4[tup[4]]]
     end
 
-    u,s,v = svd(T, (j, k);maxdim = 5)
-    U, S, V = VecG_svd(mor, (2,3), 5)
-    return u,s,v,U, S, V
+    u,s,v = svd(T, (i,j))
+    U, S, V = VecG_svd(mor, (1,2), 5)
+
+    return bo
+end
+
+function check_Z3_svd(T::Type)
+    Z3(i::Int) = GroupElement(i, CyclicGroup(3))
+    e = Z3(0)
+    a = Z3(1)
+    a2 = Z3(2)
+    I = Obj(e=>1, a=>2, a2=>3)
+    J = Obj(e=>2, a=>2, a2=>5)
+    K = Obj(e=>1, a=>3, a2=>3)
+    L = Obj(e=>1, a=>1, a2=>3)
+    mor = random_mor(T, (I, J, K, L))
+
+    U, S, V = VecG_svd(mor, (1,2), 100)
+    T1 = VecG_tensordot(U, S, (3,),(1,))
+    morp = VecG_tensordot(T1, V, (3,), (3,))
+    return mor, morp
 end
 
 function check_Z3_qr()
@@ -179,4 +197,8 @@ end
 Z3 = CyclicGroup(3)
 e = GroupElement(0, Z3)
 a = GroupElement(1, Z3)
-u,s,v,U, S, V = check_Z3_svd()
+mor1, mor2 = check_Z3_svd(ComplexF64)
+# T1 = VecG_tensordot(U, S, (3,),(1,))
+# morp = VecG_tensordot(T1, conj.(V), (3,), (3,))
+
+# check_Z3_contract()

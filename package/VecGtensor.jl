@@ -1,4 +1,4 @@
-include("groups.jl")
+# include("groups.jl")
 
 abstract type UFC end
 abstract type PointedCat <: UFC end
@@ -291,6 +291,13 @@ function Base.broadcasted(::typeof(sqrt), mor::Mor)
     return mor
 end
 
+function Base.broadcasted(::typeof(conj), mor::Mor)
+    for key in keys(mor.data)
+        mor[key] = conj.(mor[key])
+    end
+    return mor
+end
+
 function max_abs(mor::Mor)
     max = 0.
     @show keys(mor.data)
@@ -305,23 +312,24 @@ function max_abs(mor::Mor)
     return max
 end
 
-include("display.jl")
+# include("display.jl")
 
 
-G = CyclicGroup(4)
-e = GroupElement(0, G)
-a = GroupElement(1, G)
+# G = CyclicGroup(4)
+# e = GroupElement(0, G)
+# a = GroupElement(1, G)
 
-A = Obj(e=>1, a=>1, a*a=>2)
+# A = Obj(e=>1, a=>1, a*a=>2)
 
-T = random_mor(Float64, (A, A, A))
+# T = random_mor(Float64, (A, A, A))
+
 
 # for k in keys(T.data)
 #     @show k
 #     @show T[k]
 #     end
 
-@show T[e,e,e]
-Tp = sqrt.(T)
-@show T[e,e,e]
-@show max_abs(T)
+# @show T[e,e,e]
+# Tp = sqrt.(T)
+# @show T[e,e,e]
+# @show max_abs(T)

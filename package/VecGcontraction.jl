@@ -23,7 +23,7 @@ function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Gr
         for sect_A in group_tree(g_bridge, A_legs_remain), sect_B in group_tree(inverse(g_bridge), B_legs_remain)
             tot_sect = (sect_A...,sect_B...)
             tot_sect_size = get_sector_size(Cont, tot_sect)
-            Cont[tot_sect...] = zeros(tot_sect_size)
+            Cont[tot_sect...] = zeros(T, tot_sect_size)
             for sect_cont in group_tree(g_bridge, leg_cont)
                 sect_cont_prime = inverse.(reverse(sect_cont))
                 A_tot_sect = (sect_A..., sect_cont_prime...)
