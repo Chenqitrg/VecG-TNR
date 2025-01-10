@@ -1,5 +1,5 @@
-# include("groups.jl")
-# include("display.jl")
+include("groups.jl")
+
 abstract type UFC end
 abstract type PointedCat <: UFC end
 
@@ -269,3 +269,59 @@ function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<
     end
     return perm_mor
 end
+
+function Base.broadcasted(::typeof(/), mor::Mor, x::Number)
+    for key in keys(mor.data)
+        mor[key] = mor[key] ./ x
+    end
+    return mor
+end
+
+function Base.broadcasted(::typeof(/), x::Number, mor::Mor)
+    for key in keys(mor.data)
+        mor[key] = x ./ mor[key]
+    end
+    return mor
+end
+
+function Base.broadcasted(::typeof(sqrt), mor::Mor)
+    for key in keys(mor.data)
+        mor[key] = sqrt.(mor[key])
+    end
+    return mor
+end
+
+function max_abs(mor::Mor)
+    max = 0.
+    @show keys(mor.data)
+    for key in keys(mor.data)
+        if !(0 in size(mor[key]))
+            localmax = maximum(abs.(mor[key]))
+            if localmax > max
+                max = localmax
+            end
+        end
+    end
+    return max
+end
+
+include("display.jl")
+
+
+G = CyclicGroup(4)
+e = GroupElement(0, G)
+a = GroupElement(1, G)
+
+A = Obj(e=>1, a=>1, a*a=>2)
+
+T = random_mor(Float64, (A, A, A))
+
+# for k in keys(T.data)
+#     @show k
+#     @show T[k]
+#     end
+
+@show T[e,e,e]
+Tp = sqrt.(T)
+@show T[e,e,e]
+@show max_abs(T)

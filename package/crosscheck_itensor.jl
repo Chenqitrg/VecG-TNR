@@ -76,7 +76,7 @@ function check_Z3_svd()
     j = Index(q0=>2, q1=>2, q2=>5)
     k = Index(q0=>1, q1=>3, q2=>3)
     l = Index(q0=>1, q1=>1, q2=>3)
-    T = randomITensor(i,j,k,l)
+    T = randomITensor(ComplexF64, i,j,k,l)
 
     arr = array(T, i, j, k, l)
 
@@ -88,7 +88,7 @@ function check_Z3_svd()
     J = Obj(e=>2, a=>2, a2=>5)
     K = Obj(e=>1, a=>3, a2=>3)
     L = Obj(e=>1, a=>1, a2=>3)
-    mor = Mor(Float64, (I, J, K, L))
+    mor = Mor(ComplexF64, (I, J, K, L))
 
     range1 = Dict(e=>1:1, a=>2:3, a2=>4:6)
     range2 = Dict(e=>1:2, a=>3:4, a2=>5:9)
@@ -179,8 +179,4 @@ end
 Z3 = CyclicGroup(3)
 e = GroupElement(0, Z3)
 a = GroupElement(1, Z3)
-mor, mor_p = check_Z3_contract()
-
-A = Obj(e=>1, a=>1, a*a=>2)
-
-T = identity_mor(Float64, A)
+u,s,v,U, S, V = check_Z3_svd()

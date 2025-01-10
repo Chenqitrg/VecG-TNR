@@ -40,7 +40,7 @@ function VecG_svd(mor::Mor{G, T}, n_leg_split::Int) where {T, G<:Group}
     n_leg = length(mor.objects)
     U = Mor(T, (mor[1:n_leg_split]...,zero_obj(group)))
     V = Mor(T, (mor[n_leg_split+1:end]...,zero_obj(group)))
-    S = Mor(T, (zero_obj(group),zero_obj(group)))
+    S = Mor(Float64, (zero_obj(group),zero_obj(group)))
     for g_bridge in elements(group)
         block_matrix = extract_blocks_to_matrix(mor, n_leg_split, g_bridge)
         U_mat, S_vec, V_mat = block_matrix_svd(block_matrix)
@@ -55,7 +55,7 @@ function VecG_svd(mor::Mor{G, T}, n_leg_split::Int) where {T, G<:Group}
             U[out_sector..., inverse(g_bridge)] = reshape(U_mat[i], get_sector_size(U, (out_sector..., inverse(g_bridge))))
         end
         for (j,in_sector) in enumerate(in_sectors)
-            V[in_sector..., g_bridge] = reshape(V_mat[j], get_sector_size(V, (in_sector..., g_bridge)))
+            V[in_sector..., g_bridge] = reshape(conj.(V_mat[j]), get_sector_size(V, (in_sector..., g_bridge)))
         end
         S[g_bridge,inverse(g_bridge)] = diagm(S_vec)
     end
@@ -64,9 +64,9 @@ function VecG_svd(mor::Mor{G, T}, n_leg_split::Int) where {T, G<:Group}
 
 end
 
-function VecG_cutoff(U::Mor{G,T}, S::Mor{G,T}, V::Mor{G,T}, Dcut::Int) where {T,G<:Group}
+function VecG_cutoff(U::Mor{G,T}, S::Mor{G,Float64}, V::Mor{G,T}, Dcut::Int) where {T,G<:Group}
     group = get_group(S)
-    S_tot = T[]
+    S_tot = Float64[]
     out_legs = length(U.objects) - 1
     in_legs = length(V.objects) - 1
     
@@ -83,6 +83,30 @@ function VecG_cutoff(U::Mor{G,T}, S::Mor{G,T}, V::Mor{G,T}, Dcut::Int) where {T,
     for g in elements(group)
         for out_sect in group_tree(g, out_legs), in_sect in group_tree(inverse(g), in_legs)
             Dcut_sect = sum(diag(S[g, inverse(g)]) .>= cutoff_threshold)
+            U_indices = ntuple(_ -> :, out_legs)
+            V_indices = ntuple(_->:, in_legs)
+            U[end][inverse(g)] = Dcut_sect
+            V[end][g] = Dcut_sect
+            S[1][g] = Dcut_sect
+            S[2][inverse(g)] = Dcut_sect
+            U[out_sect..., inverse(g)] = U[out_sect..., inverse(g)][U_indices..., 1:Dcut_sect]
+            V[in_sect..., g] = V[in_sect..., g][V_indices..., 1:Dcut_sect]
+            S[g, inverse(g)] = S[g, inverse(g)][1:Dcut_sect, 1:Dcut_sect]
+        end
+    end
+    
+    return U, S, V
+end
+
+function VecG_cutoff(U::Mor{G,T}, S::Mor{G,Float64}, V::Mor{G,T}, epsilon::Float64) where {T,G<:Group}
+    group = get_group(S)
+
+    out_legs = length(U.objects) - 1
+    in_legs = length(V.objects) - 1
+
+    for g in elements(group)
+        for out_sect in group_tree(g, out_legs), in_sect in group_tree(inverse(g), in_legs)
+            Dcut_sect = sum(diag(S[g, inverse(g)]) .>= epsilon)
             U_indices = ntuple(_ -> :, out_legs)
             V_indices = ntuple(_->:, in_legs)
             U[end][inverse(g)] = Dcut_sect
@@ -137,6 +161,21 @@ function VecG_svd(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int)
 
     U, S, V = VecG_svd(perm_mor, length(n_leg_split))
     U, S, V = VecG_cutoff(U, S, V, Dcut)
+
+    return U, S, V
+end
+
+function VecG_svd(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, epsilon::Float64)
+    modn = length(mor.objects)
+    if is_accend(n_leg_split, modn) == false
+        throw(ArgumentError("The factorize leg $n_leg_split is not accending"))
+    end
+
+    perm = to_perm(n_leg_split, modn)
+    perm_mor = VecG_permutedims(mor, perm)
+
+    U, S, V = VecG_svd(perm_mor, length(n_leg_split))
+    U, S, V = VecG_cutoff(U, S, V, epsilon)
 
     return U, S, V
 end
