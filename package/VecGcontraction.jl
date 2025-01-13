@@ -1,6 +1,6 @@
-include("groups.jl")
-include("VecGtensor.jl")
-include("display.jl")
+# include("groups.jl")
+# include("VecGtensor.jl")
+# include("display.jl")
 using LinearAlgebra
 function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Group}
     A_legs = length(A.objects)
@@ -23,7 +23,7 @@ function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Gr
         for sect_A in group_tree(g_bridge, A_legs_remain), sect_B in group_tree(inverse(g_bridge), B_legs_remain)
             tot_sect = (sect_A...,sect_B...)
             tot_sect_size = get_sector_size(Cont, tot_sect)
-            Cont[tot_sect...] = zeros(T, tot_sect_size)
+            Cont[tot_sect...] = zeros(T,tot_sect_size)
             for sect_cont in group_tree(g_bridge, leg_cont)
                 sect_cont_prime = inverse.(reverse(sect_cont))
                 A_tot_sect = (sect_A..., sect_cont_prime...)
@@ -64,15 +64,21 @@ function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, A_cont::Tuple{Vararg{Int}}, B_
 end
 
 
-function VecG_factorize(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int)
-    U, S, V = VecG_svd(mor, n_leg_split, Dcut)
+function VecG_factorize(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int, epsilon::Float64)
+    U, S, V = VecG_svd(mor, n_leg_split, Dcut, epsilon)
     group = get_group(S)
     for k in elements(group)
         S[k, inverse(k)] = sqrt.(S[k, inverse(k)])
     end
-
+    # @show U[3]
+    # @show S[1]
+    # @show S[2]
+    # @show V[3]
+    # A = VecG_permutedims(S, (1,2))
+    # @show A[1]
+    # @show A[2]
     F = VecG_tensordot(U, S, 1)
-    K = VecG_tensordot(V, VecG_permutedims(S, (1,2)), 1)
+    K = VecG_tensordot(V, VecG_permutedims(S, (2,1)), 1)
     
     return F, K
 end

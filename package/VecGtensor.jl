@@ -277,30 +277,53 @@ function Base.broadcasted(::typeof(/), mor::Mor, x::Number)
     return mor
 end
 
-function Base.broadcasted(::typeof(/), x::Number, mor::Mor)
+function Base.broadcasted(::typeof(/), x::Number, mor::Mor{G, T}) where {T, G<:Group}
+    newmor = Mor(T, mor.objects)
     for key in keys(mor.data)
-        mor[key] = x ./ mor[key]
+        newmor[key] = diagm(x ./ diag(mor[key]))
     end
-    return mor
+    return newmor
 end
 
-function Base.broadcasted(::typeof(sqrt), mor::Mor)
+function Base.broadcasted(::typeof(sqrt), mor::Mor{G, T}) where {T, G<:Group}
+    newmor = Mor(T, mor.objects)
     for key in keys(mor.data)
-        mor[key] = sqrt.(mor[key])
+        newmor[key] = sqrt.(mor[key])
     end
-    return mor
+    return newmor
 end
 
-function Base.broadcasted(::typeof(conj), mor::Mor)
-    for key in keys(mor.data)
-        mor[key] = conj.(mor[key])
+#   | | | | |
+#   1 2 3 4 5
+#   | | | | |
+#   ^ ^ ^ ^ ^
+#   | | | | |
+#       T
+# dagger:
+#   | | | | |
+#   5 4 3 2 1
+#   | | | | |
+#   v v v v v
+#   | | | | |
+#       T^†
+function VecG_dag(mor::Mor{G, T}) where {T, G<:Group}
+    group = get_group(mor)
+    leg_number = length(mor.objects)
+    obj = ()
+    for i in 1:leg_number
+        obj = (dual_obj(mor[i]), obj...)
     end
-    return mor
+    mor_dag = Mor(T, obj)
+    for key in group_tree(identity(group), leg_number)
+        # @show key
+        dag_key = reverse(inverse.(key))
+        mor_dag[key...] = permutedims(conj.(mor[dag_key...]), reverse(1:leg_number))
+    end
+    return mor_dag
 end
 
 function max_abs(mor::Mor)
     max = 0.
-    @show keys(mor.data)
     for key in keys(mor.data)
         if !(0 in size(mor[key]))
             localmax = maximum(abs.(mor[key]))

@@ -91,3 +91,15 @@ function Base.show(io::IO, ::MIME"text/plain", T::Mor)
         println(io, "Leg $i is of object $obj")
     end
 end
+
+# # Custom display for Morphism
+# function Base.show(io::IO, T::Mor)
+#     println(io, "Group: ", get_group(T))
+#     for (i, obj) in enumerate(T.objects)
+#         println(io, "Leg $i is of object $obj")
+#     end
+#     for key in keys(T.data)
+#         println(io, "\n $key:")
+#         display(T[key])
+#     end
+# end

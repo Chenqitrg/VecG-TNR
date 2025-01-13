@@ -122,6 +122,40 @@ function VecG_cutoff(U::Mor{G,T}, S::Mor{G,T}, V::Mor{G,T}, epsilon::Float64) wh
     return U, S, V
 end
 
+function VecG_cutoff(U::Mor{G,T}, S::Mor{G,T}, V::Mor{G,T}, Dcut::Int, epsilon::Float64) where {T,G<:Group}
+    group = get_group(S)
+    S_tot = T[]
+    out_legs = length(U.objects) - 1
+    in_legs = length(V.objects) - 1
+    
+    for g in elements(group)
+        append!(S_tot, diag(S[g, inverse(g)]))
+    end
+
+    S_tot_vcat = vcat(S_tot)
+    
+    sorted_singular_values = sort(abs.(S_tot), rev=true)  # 从大到小排序
+    cutoff = min(Dcut, length(S_tot_vcat))
+    cutoff_threshold = max(sorted_singular_values[cutoff],epsilon)
+
+    for g in elements(group)
+        for out_sect in group_tree(g, out_legs), in_sect in group_tree(inverse(g), in_legs)
+            Dcut_sect = sum(abs.(diag(S[g, inverse(g)])) .>= cutoff_threshold)
+            U_indices = ntuple(_ -> :, out_legs)
+            V_indices = ntuple(_->:, in_legs)
+            U[end][inverse(g)] = Dcut_sect
+            V[end][g] = Dcut_sect
+            S[1][g] = Dcut_sect
+            S[2][inverse(g)] = Dcut_sect
+            U[out_sect..., inverse(g)] = U[out_sect..., inverse(g)][U_indices..., 1:Dcut_sect]
+            V[in_sect..., g] = V[in_sect..., g][V_indices..., 1:Dcut_sect]
+            S[g, inverse(g)] = S[g, inverse(g)][1:Dcut_sect, 1:Dcut_sect]
+        end
+    end
+    
+    return U, S, V
+end
+
 function VecG_qr(mor::Mor{G, T}, n_leg_split::Int) where {T, G<:Group}
     group = get_group(mor)
     n_leg = length(mor.objects)
@@ -176,6 +210,21 @@ function VecG_svd(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, epsilon::Float64)
 
     U, S, V = VecG_svd(perm_mor, length(n_leg_split))
     U, S, V = VecG_cutoff(U, S, V, epsilon)
+
+    return U, S, V
+end
+
+function VecG_svd(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int, epsilon::Float64)
+    modn = length(mor.objects)
+    if is_accend(n_leg_split, modn) == false
+        throw(ArgumentError("The factorize leg $n_leg_split is not accending"))
+    end
+
+    perm = to_perm(n_leg_split, modn)
+    perm_mor = VecG_permutedims(mor, perm)
+
+    U, S, V = VecG_svd(perm_mor, length(n_leg_split))
+    U, S, V = VecG_cutoff(U, S, V, Dcut, epsilon)
 
     return U, S, V
 end
