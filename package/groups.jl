@@ -126,6 +126,11 @@ function group_tree(g::GroupElement, n::Int)
     end
 end
 
+function group_iter(group::Group, n::Int)
+    elem = elements(group)
+    return IterTools.product((elem for _ in 1:n)...)
+end
+
 # Helper to verify group axioms
 function verify_group_axioms(g::Group)
     elts = elements(g)

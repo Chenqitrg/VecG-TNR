@@ -70,18 +70,42 @@ function VecG_factorize(mor::Mor, n_leg_split::Tuple{Vararg{Int}}, Dcut::Int, ep
     for k in elements(group)
         S[k, inverse(k)] = sqrt.(S[k, inverse(k)])
     end
-    # @show U[3]
-    # @show S[1]
-    # @show S[2]
-    # @show V[3]
-    # A = VecG_permutedims(S, (1,2))
-    # @show A[1]
-    # @show A[2]
     F = VecG_tensordot(U, S, 1)
     K = VecG_tensordot(V, VecG_permutedims(S, (2,1)), 1)
     
     return F, K
 end
+
+function VecG_partial_trace(mor::Mor{G, T}, leg_cont::Int) where {T, G<:Group}
+    group = get_group(mor)
+    e = identity(group)
+    n_leg = length(mor.objects)
+
+    if 2*leg_cont > n_leg
+        throw(ArgumentError("The number of traced legs $(2*leg_cont) is larger than the number of total legs $n_leg"))
+    end
+
+    for i = 1 : leg_cont
+        if mor[n_leg-2*leg_cont+i] != dual_obj(mor[n_leg-i+1])
+            throw(ArgumentError("The $(n_leg-2*leg_cont+i)-th leg is $(mor[n_leg-2*leg_cont+i]), not the dual of $(n_leg-i+1)-th leg $(mor[n_leg-i+1])"))
+        end
+    end
+
+    leg_remain = n_leg - 2 * leg_cont
+
+    objs = mor[1:leg_remain]
+
+    new_mor = zero_mor(T, objs)
+    for sect_remain in group_tree(e, leg_remain)
+        for sect_tr in group_iter(group, leg_cont)
+            inv_sect_tr = reverse(inverse.(sect_tr))
+            new_mor[sect_remain...] = new_mor[sect_remain...] + partial_trace(mor[sect_remain..., sect_tr..., inv_sect_tr...], leg_cont)
+        end
+    end
+
+    return new_mor
+end
+
 # Z4 = CyclicGroup(4)
 # e = GroupElement(0, Z4)
 # a = GroupElement(1, Z4)

@@ -111,13 +111,13 @@ end
 
 beta = log(sqrt(2)+1)/2
 
-mor = ising(0.9 * beta)
+mor = ising(1.01 * beta)
 
 for n = 1:100
     global mor
     println("n = $n")
     morA, morB = entanglement_filtering(mor, mor, 10, 1e-12)
-    mor = coarse_graining(morA, morB, 16, 1e-15)
+    mor = coarse_graining(morA, morB, 32, 1e-15)
 end
 
 @show mor

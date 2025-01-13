@@ -194,10 +194,27 @@ function check_Z3_contract()
     return mor, mor_p
 end
 
+function check_partial_trace()
+    Z3(i::Int) = GroupElement(i, CyclicGroup(3))
+    e = Z3(0)
+    a = Z3(1)
+    a2 = Z3(2)
+    I = Obj(e=>1, a=>2, a2=>3)
+    J = Obj(e=>2, a=>2, a2=>5)
+    K = Obj(e=>1, a=>2, a2=>3)
+    L = Obj(e=>2, a=>4, a2=>5)
+    M = Obj(e=>2, a=>5, a2=>4)
+    N = Obj(e=>1, a=>3, a2=>2)
+    mor = random_mor(Float64, (I, J, K, L, M, N))
+
+    newmor = VecG_partial_trace(mor, 2)
+end
+
+
 Z3 = CyclicGroup(3)
 e = GroupElement(0, Z3)
 a = GroupElement(1, Z3)
-mor1, mor2 = check_Z3_svd(ComplexF64)
+mor = check_partial_trace()
 # T1 = VecG_tensordot(U, S, (3,),(1,))
 # morp = VecG_tensordot(T1, conj.(V), (3,), (3,))
 

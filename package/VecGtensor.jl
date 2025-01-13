@@ -85,8 +85,19 @@ function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     for grouptuple in iter
         size = get_sector_size(mor, grouptuple)
         mor[grouptuple...] = rand(element_type, size...)
-        # @show grouptuple
-        # @show size
+    end
+    return mor
+end
+
+# Construct a random morphism for a given objects
+function zero_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
+    mor = Mor(element_type, objects)
+    group = get_group(mor)
+    e = identity(group)
+    iter = group_tree(e, length(objects))
+    for grouptuple in iter
+        size = get_sector_size(mor, grouptuple)
+        mor[grouptuple...] = zeros(element_type, size...)
     end
     return mor
 end

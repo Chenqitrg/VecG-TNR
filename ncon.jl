@@ -1,58 +1,16 @@
-"""
-    ncon(tensor_list, connect_list_in; con_order=[], check_network=true)
-------------------------
-    by Glen Evenbly (c) for www.tensors.net, (v1.2) - last modified 6/2020
-------------------------
-Network CONtractor. Input is an array of tensors 'tensor_list' and an array of
-vectors 'connect_list_in',  with each vector labelling the indices of the
-corresponding tensor. Labels should be  positive integers for contracted indices
-and negative integers for free indices. Optional input 'con_order'  can be used
-to specify order of index contractions (otherwise defaults to ascending order of
-the positive indices). Checking of the consistancy of the input network can be
-disabled for slightly faster operation.
-
-Further information can be found at: https://arxiv.org/abs/1402.0939
-"""
 function ncon(
   tensor_list,
   connect_list_in;
-  con_order = [],
-  check_network = true,
 )
 
   # copy original list to avoid destroying
   connect_list = deepcopy(connect_list_in)
-
-  # put inputs into an array if necessary
-  if (tensor_list[1] isa Real) | (tensor_list[1] isa Complex)
-    tensor_list = Any[tensor_list]
-  end
-  if !(connect_list[1] isa Array)
-    connect_list = Any[connect_list]
-  end
-
-  # generate contraction order if necessary
-  flat_connect = vcat(connect_list...)
-  if isempty(con_order)
-    con_order = sort(unique(flat_connect[flat_connect.>0]))
-  end
-
-  # check inputs if enabled
-  if check_network
-    dims_list = Array{Any,1}(undef, length(tensor_list))
-    for ik = 1:length(tensor_list)
-      dims_list[ik] = [size(tensor_list[ik])...]
-    end
-    ncon_check_inputs(connect_list, flat_connect, dims_list, con_order)
-  end
-
   # do all partial traces
   for ip = 1:length(connect_list)
     num_cont = length(connect_list[ip]) - length(unique(connect_list[ip]))
     if num_cont > 0
-      tensor_list[ip], connect_list[ip], cont_label =
+      tensor_list[ip], connect_list[ip] =
         ncon_partial_trace(tensor_list[ip], connect_list[ip])
-      con_order = setdiff(con_order, cont_label)
     end
   end
 
@@ -91,20 +49,6 @@ function ncon(
     deleteat!(connect_list, locs)
     deleteat!(tensor_list, locs)
     con_order = setdiff(con_order, cont_many)
-  end
-
-  # do all outer products
-  while length(tensor_list) > 1
-    s1 = size(tensor_list[end-1])
-    s2 = size(tensor_list[end])
-    tensor_list[end-1] = reshape(
-      reshape(tensor_list[end-1], prod(s1)) *
-      reshape(tensor_list[end], 1, prod(s2)),
-      (s1..., s2...),
-    )
-    connect_list[end-1] = vcat(connect_list[end-1], connect_list[end])
-    deleteat!(connect_list, length(connect_list))
-    deleteat!(tensor_list, length(tensor_list))
   end
 
   # do final permutation
@@ -175,7 +119,7 @@ function ncon_partial_trace(A, A_label)
       B = B + A[:, ip, ip]
     end
 
-    return reshape(B, free_dim), deleteat!(A_label, sort(cont_ind)), cont_label
+    return reshape(B, free_dim), deleteat!(A_label, sort(cont_ind))
   else
     return A, A_label
   end

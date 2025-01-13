@@ -120,6 +120,21 @@ function test_block_matrix_svd()
     return block_matrix_svd(matrices)
 end
 
+function partial_trace(arr::Array{T}, leg_cont::Int) where {T}
+    sizeT = size(arr)
+    tot_legs = length(sizeT)
+    num_remain = tot_legs - 2 * leg_cont
+    new_arr = zeros(T, sizeT[1:num_remain])
+    new_iter = Iterators.product((1:n for n in sizeT[1:num_remain])...)
+    sum_iter = Iterators.product((1:n for n in sizeT[num_remain+1:num_remain+leg_cont])...)
+    for newind in new_iter
+        for reind in sum_iter
+            new_arr[newind...] = new_arr[newind...] + arr[newind..., reind..., reverse(reind)...]
+        end
+    end
+    return new_arr
+end
+
 function test_block_matrix_qr()
     # Define submatrices
     A = [1 2; 3 4]  # 2x3 matrix
@@ -138,13 +153,3 @@ function test_block_matrix_qr()
     # big_matrix, metadata = concatenate_matrices_with_metadata(matrices)
     return block_matrix_qr(matrices)
 end
-
-# # Outputs
-# println("Big Matrix:")
-# println(big_matrix)
-
-# println("\nMetadata:")
-# for key in keys(metadata)
-#     println("$key => $(metadata[key])")
-# end
-test_block_matrix_qr()
