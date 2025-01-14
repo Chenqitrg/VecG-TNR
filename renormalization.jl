@@ -108,16 +108,24 @@ function coarse_graining(morA::Mor{G, T}, morB::Mor{G, T}, Dcut::Int, epsilon::F
     return newmor./Omega
 end
 
+# function Gilt(morA::Mor{G, T}, morB::Mor{G, T}, epsilon::Float64) where {T, G<:Group}
+#     Env = VecG_tensordot(morA, morB, (4,), (2,))
+#     Env = VecG_tensordot(Env, morA, (6,), (3,))
+#     Env = VecG_tensordot(Env, morB, (8,), (4,))
+#     U, S, _ = VecG_svd(Env, (10, 1))
+#     t = []
 
-beta = log(sqrt(2)+1)/2
+# end
 
-mor = ising(1.01 * beta)
+# beta = log(sqrt(2)+1)/2
 
-for n = 1:100
-    global mor
-    println("n = $n")
-    morA, morB = entanglement_filtering(mor, mor, 10, 1e-12)
-    mor = coarse_graining(morA, morB, 32, 1e-15)
-end
+# mor = ising(1.01 * beta)
 
-@show mor
+# for n = 1:100
+#     global mor
+#     println("n = $n")
+#     morA, morB = entanglement_filtering(mor, mor, 10, 1e-12)
+#     mor = coarse_graining(morA, morB, 32, 1e-15)
+# end
+
+# @show mor

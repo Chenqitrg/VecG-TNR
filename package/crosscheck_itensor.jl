@@ -1,10 +1,7 @@
 using ITensors
-include("groups.jl")
-include("block_matrix_calculation.jl")
-include("VecGtensor.jl")
-include("display.jl")
-include("VecGdecomposition.jl")
-include("VecGcontraction.jl")
+
+include("main.jl")
+using VecG_TNR
 
 function check_Z2_svd()
     q0 = QN(0,2)
@@ -214,7 +211,10 @@ end
 Z3 = CyclicGroup(3)
 e = GroupElement(0, Z3)
 a = GroupElement(1, Z3)
+a2 = a*a
 mor = check_partial_trace()
+check_Z3_svd(Float64)
+check_Z3_contract()
 # T1 = VecG_tensordot(U, S, (3,),(1,))
 # morp = VecG_tensordot(T1, conj.(V), (3,), (3,))
 

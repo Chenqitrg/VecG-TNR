@@ -1,7 +1,4 @@
-# include("groups.jl")
-# include("VecGtensor.jl")
-# include("display.jl")
-using LinearAlgebra
+
 function VecG_tensordot(A::Mor{G,T}, B::Mor{G,T}, leg_cont::Int) where {T, G<:Group}
     A_legs = length(A.objects)
     B_legs = length(B.objects)
@@ -78,7 +75,7 @@ end
 
 function VecG_partial_trace(mor::Mor{G, T}, leg_cont::Int) where {T, G<:Group}
     group = get_group(mor)
-    e = identity(group)
+    e = identity_element(group)
     n_leg = length(mor.objects)
 
     if 2*leg_cont > n_leg

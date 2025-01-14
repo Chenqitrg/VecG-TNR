@@ -1,8 +1,3 @@
-# include("groups.jl")
-# include("block_matrix_calculation.jl")
-# include("VecGtensor.jl")
-# include("display.jl")
-
 function extract_blocks_to_matrix(mor::Mor{G, T}, n_leg_split::Int, g_bridge::GroupElement{G}) where {T, G <: Group} # legs split as 1, ..., n-1, n, |, n+1, n+2, ...
     n_leg = length(mor.objects)
     group = get_group(mor)
@@ -242,4 +237,3 @@ function VecG_qr(mor::Mor, n_leg_split::Tuple{Vararg{Int}})
 
     return Q, R
 end
-

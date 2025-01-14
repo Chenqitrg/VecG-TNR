@@ -1,5 +1,3 @@
-# include("groups.jl")
-
 abstract type UFC end
 abstract type PointedCat <: UFC end
 
@@ -40,7 +38,7 @@ end
 # Construction function for a sector
 function Sector(groupelements::GroupElement...)
     group = first(groupelements).group
-    if multiply(groupelements) != identity(group)
+    if multiply(groupelements) != identity_element(group)
         throw(ArgumentError("The sector $groupelements is not consistent"))
     else
         return Sector(groupelements)
@@ -80,7 +78,7 @@ end
 function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
     group = get_group(mor)
-    e = identity(group)
+    e = identity_element(group)
     iter = group_tree(e, length(objects))
     for grouptuple in iter
         size = get_sector_size(mor, grouptuple)
@@ -93,7 +91,7 @@ end
 function zero_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
     group = get_group(mor)
-    e = identity(group)
+    e = identity_element(group)
     iter = group_tree(e, length(objects))
     for grouptuple in iter
         size = get_sector_size(mor, grouptuple)
@@ -167,7 +165,7 @@ end
 # Get the size of a morphism at a given sector
 function get_sector_size(mor::Mor{G, T}, tup::Tuple{Vararg{GroupElement{G}}}) where {T, G<:Group}
     group = get_group(mor)
-    if multiply(tup) != identity(group)
+    if multiply(tup) != identity_element(group)
         throw(ArgumentError("The sector $tup is not consistent"))
     else
         size = ()
@@ -325,7 +323,7 @@ function VecG_dag(mor::Mor{G, T}) where {T, G<:Group}
         obj = (dual_obj(mor[i]), obj...)
     end
     mor_dag = Mor(T, obj)
-    for key in group_tree(identity(group), leg_number)
+    for key in group_tree(identity_element(group), leg_number)
         # @show key
         dag_key = reverse(inverse.(key))
         mor_dag[key...] = permutedims(conj.(mor[dag_key...]), reverse(1:leg_number))
@@ -345,25 +343,3 @@ function max_abs(mor::Mor)
     end
     return max
 end
-
-# include("display.jl")
-
-
-# G = CyclicGroup(4)
-# e = GroupElement(0, G)
-# a = GroupElement(1, G)
-
-# A = Obj(e=>1, a=>1, a*a=>2)
-
-# T = random_mor(Float64, (A, A, A))
-
-
-# for k in keys(T.data)
-#     @show k
-#     @show T[k]
-#     end
-
-# @show T[e,e,e]
-# Tp = sqrt.(T)
-# @show T[e,e,e]
-# @show max_abs(T)

@@ -9,13 +9,13 @@ struct CyclicGroup <: Group{Int}
     n::Int
 end
 
-struct DihedralGroup <: Group{Tuple{Int, Int}}
+struct DihedralGroup <: Group{Tuple{Int,Int}}
     n::Int
 end
 
 # 辅助函数，用于获取 Group 的值类型
 Base.eltype(::Type{<:CyclicGroup}) = Int
-Base.eltype(::Type{<:DihedralGroup}) = Tuple{Int, Int}
+Base.eltype(::Type{<:DihedralGroup}) = Tuple{Int,Int}
 
 # 群元素定义
 struct GroupElement{G<:Group}
@@ -26,7 +26,7 @@ end
 
 # 群元素构造函数，支持循环群和二面体群
 function GroupElement(value::Any, group::CyclicGroup)
-    return GroupElement{CyclicGroup}(mod(value, group.n), group) 
+    return GroupElement{CyclicGroup}(mod(value, group.n), group)
 end
 
 function GroupElement(value::Tuple, group::DihedralGroup)
@@ -51,11 +51,11 @@ function elements(group::DihedralGroup)::Tuple
 end
 
 # 单位元
-function identity(group::CyclicGroup)
+function identity_element(group::CyclicGroup)
     return GroupElement(0, group)
 end
 
-function identity(group::DihedralGroup)
+function identity_element(group::DihedralGroup)
     return GroupElement((0, 0), group)
 end
 
@@ -121,7 +121,7 @@ function group_tree(g::GroupElement, n::Int)
     else
         group = g.group  # 从 g 中推断所属群
         elem = elements(group)
-        tup = IterTools.product((elem for _ in 1:(n - 1))...)
+        tup = IterTools.product((elem for _ in 1:(n-1))...)
         return Iterators.map(x -> (x..., inverse(inverse(g) * multiply(x))), tup)
     end
 end
@@ -137,7 +137,7 @@ function verify_group_axioms(g::Group)
     println("Verifying Group Axioms for ", typeof(g))
 
     # Identity element
-    id = identity(g)
+    id = identity_element(g)
     println("Identity: ", all(x -> (x * id).value == x.value && (id * x).value == x.value, elts))
 
     # Associativity
@@ -146,4 +146,3 @@ function verify_group_axioms(g::Group)
     # Inverses
     println("Inverses: ", all(x -> (x * inverse(x)).value == id.value && (inverse(x) * x).value == id.value, elts))
 end
-

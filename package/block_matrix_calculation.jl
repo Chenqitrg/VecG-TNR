@@ -1,5 +1,3 @@
-using LinearAlgebra
-
 function concatenate_matrices_with_metadata(matrices::AbstractMatrix{<:AbstractMatrix})
     # Number of submatrices in rows and columns
     rows::Int = size(matrices, 1)  # Number of submatrices in each row
