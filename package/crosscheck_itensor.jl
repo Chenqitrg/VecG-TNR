@@ -1,7 +1,7 @@
 using ITensors
-
-include("main.jl")
-using VecG_TNR
+using Revise
+includet("main.jl")
+using .VecG_TNR
 
 function check_Z2_svd()
     q0 = QN(0,2)
@@ -191,6 +191,43 @@ function check_Z3_contract()
     return mor, mor_p
 end
 
+function check_Z3_contract2()
+    q0 = QN(0,3)
+    q1 = QN(1,3)
+    q2 = QN(2,3)
+    i = Index(q0=>1, q1=>2, q2=>3)
+    j = Index(q0=>2, q1=>2, q2=>2)
+    k = Index(q0=>3, q1=>3, q2=>3)
+    l = Index(q0=>4, q1=>1, q2=>3)
+    T = randomITensor(i,j,k,l)
+
+    arr = array(T, i, j, k, l)
+
+    Z3(i::Int) = GroupElement(i, CyclicGroup(3))
+    e = Z3(0)
+    a = Z3(1)
+    a2 = Z3(2)
+    I = Obj(e=>1, a=>2, a2=>3)
+    J = Obj(e=>2, a=>2, a2=>2)
+    K = Obj(e=>3, a=>3, a2=>3)
+    L = Obj(e=>4, a=>1, a2=>3)
+    mor = Mor(Float64, (I, J, K, L))
+
+    range1 = Dict(e=>1:1, a=>2:3, a2=>4:6)
+    range2 = Dict(e=>1:2, a=>3:4, a2=>5:6)
+    range3 = Dict(e=>1:3, a=>4:6, a2=>7:9)
+    range4 = Dict(e=>1:4, a=>5:5, a2=>6:8)
+
+    for tup in group_tree(e, 4)
+        mor[tup...] = arr[range1[tup[1]], range2[tup[2]], range3[tup[3]], range4[tup[4]]]
+    end
+
+    TT = T * dag(δ(k,dag(k'))) * dag(δ(l,dag(l'))) * dag(T')
+
+    mm = VecG_tensordot(mor, VecG_dag(mor), (3,4), (2,1))
+    return TT, mm
+end
+
 function check_partial_trace()
     Z3(i::Int) = GroupElement(i, CyclicGroup(3))
     e = Z3(0)
@@ -207,14 +244,58 @@ function check_partial_trace()
     newmor = VecG_partial_trace(mor, 2)
 end
 
+function check_partial_trace_full()
+    Z3(i::Int) = GroupElement(i, CyclicGroup(3))
+    e = Z3(0)
+    a = Z3(1)
+    a2 = Z3(2)
+    K = Obj(e=>1, a=>2, a2=>3)
+    L = Obj(e=>2, a=>4, a2=>5)
+    M = Obj(e=>4, a=>5, a2=>4)
+    N = Obj(e=>3, a=>3, a2=>2)
+    mor = random_mor(Float64, (K, L, M, N))
+
+    newmor = VecG_partial_trace(mor, 2)
+    return newmor
+end
+
+function check_add()
+    Z3(i::Int) = GroupElement(i, CyclicGroup(3))
+    e = Z3(0)
+    a = Z3(1)
+    a2 = Z3(2)
+    I = Obj(e=>1, a=>2, a2=>3)
+    J = Obj(e=>2, a=>2, a2=>5)
+    K = Obj(e=>1, a=>2, a2=>3)
+    L = Obj(e=>2, a=>4, a2=>5)
+    M = Obj(e=>2, a=>5, a2=>4)
+    N = Obj(e=>1, a=>3, a2=>2)
+    mora = random_mor(Float64, (I, J, K, L, M, N))
+    morb = random_mor(Float64, (I, J, K, L, M, N))
+    return mora, morb, mora + morb, mora - morb
+end
+
+function check_square()
+    Z2(i::Int) = GroupElement(i, CyclicGroup(1))
+    e = Z2(0)
+    a = Z2(1)
+    I = Obj(e=>1)
+    J = Obj(e=>1)
+    mora = random_mor(ComplexF64, (I, J))
+    @show mora
+    @show VecG_dag(mora)
+    return VecG_square(mora)
+end
 
 Z3 = CyclicGroup(3)
 e = GroupElement(0, Z3)
 a = GroupElement(1, Z3)
 a2 = a*a
-mor = check_partial_trace()
-check_Z3_svd(Float64)
-check_Z3_contract()
+# mor = check_partial_trace()
+# check_Z3_svd(Float64)
+# check_Z3_contract()
+# a, b,A, B = check_add()
+TT= check_square()
 # T1 = VecG_tensordot(U, S, (3,),(1,))
 # morp = VecG_tensordot(T1, conj.(V), (3,), (3,))
 

@@ -279,6 +279,46 @@ function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<
     return perm_mor
 end
 
+function Base.:+(mora::Mor{G, T}, morb::Mor{G, T}) where {T, G<:Group}
+    if length(mora.objects)!=length(morb.objects)
+        throw(ArgumentError("The first tensor has $(length(mora.objects)) number of legs, while the second tensor has $(length(morb.objects)) number of legs"))
+    else
+        for i in 1:length(mora.objects)
+            if mora[i]!=morb[i]
+                throw(ArgumentError("The $i-th leg of the first tensor has object $(mora[i]), while the second tensor has object $(morb[i])"))
+            end
+        end
+    end
+
+    moradd = Mor(T, mora.objects)
+
+    for key in keys(mora.data)
+        moradd[key] = mora[key] + morb[key]
+    end
+
+    return moradd
+end
+
+function Base.:-(mora::Mor{G, T}, morb::Mor{G, T}) where {T, G<:Group}
+    if length(mora.objects)!=length(morb.objects)
+        throw(ArgumentError("The first tensor has $(length(mora.objects)) number of legs, while the second tensor has $(length(morb.objects)) number of legs"))
+    else
+        for i in 1:length(mora.objects)
+            if mora[i]!=morb[i]
+                throw(ArgumentError("The $i-th leg of the first tensor has object $(mora[i]), while the second tensor has object $(morb[i])"))
+            end
+        end
+    end
+
+    morsubt = Mor(T, mora.objects)
+
+    for key in keys(mora.data)
+        morsubt[key] = mora[key] - morb[key]
+    end
+
+    return morsubt
+end
+
 function Base.broadcasted(::typeof(/), mor::Mor, x::Number)
     for key in keys(mor.data)
         mor[key] = mor[key] ./ x
