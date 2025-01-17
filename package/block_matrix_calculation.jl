@@ -151,3 +151,14 @@ function test_block_matrix_qr()
     # big_matrix, metadata = concatenate_matrices_with_metadata(matrices)
     return block_matrix_qr(matrices)
 end
+
+
+function outer_product(A::Array, B::Array)
+    return reshape([a * b for a in A, b in B], size(A)..., size(B)...)
+end
+
+function test_outer_product()
+    A = rand(2,3)
+    B = rand(2,2)
+    return outer_product(A, B)
+end

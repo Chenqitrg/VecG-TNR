@@ -45,6 +45,31 @@ function subscript(n::Integer)
     return join([subs[c] for c in string(n)])
 end
 
+function to_subscript(string::String)
+    # 映射表：普通字母 -> 下标字母
+    subscript_map = Dict(
+        'a' => 'ₐ',
+        'e' => 'ₑ',
+        'h' => 'ₕ',
+        'i' => 'ᵢ',
+        'j' => 'ⱼ',
+        'k' => 'ₖ',
+        'l' => 'ₗ',
+        'm' => 'ₘ',
+        'n' => 'ₙ',
+        'o' => 'ₒ',
+        'p' => 'ₚ',
+        'r' => 'ᵣ',
+        's' => 'ₛ',
+        't' => 'ₜ',
+        'u' => 'ᵤ',
+        'v' => 'ᵥ',
+        'x' => 'ₓ'
+    )
+    # 返回对应的下标字母，如果没有对应的，返回原字母
+    return join([subscript_map[c] for c in string])
+end
+
 function superscript(n::Integer)
     # 定义一个映射，将字符 '0'-'9' 转换为 Unicode 下角标字符
     subs = Dict('0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
@@ -92,3 +117,32 @@ function Base.show(io::IO, ::MIME"text/plain", T::Mor)
     end
 end
 
+# Custom display for Morphism
+function Base.show(io::IO, ::MIME"text/plain", T::TubeMor)
+    println(io, "Group: ", get_group(T))
+    for (i, obj) in enumerate(T.in)
+        println(io, "In legs: leg $i is of object $obj")
+    end
+    for (i, obj) in enumerate(T.out)
+        println(io, "Out legs: leg $i is of object $obj")
+    end
+end
+
+# Custom display for a sector in Tube category
+function Base.show(io::IO, S::TubeSector)
+    for (i, g) in enumerate(S.insect)
+        if i != 1
+            print(io, " ⊗ ")
+        end
+        print(io, g)
+    end
+    print(io, " →(", S.circ, ") ")
+    # print(io, sect[2])
+    # print(io, "\ ")
+    for (i, g) in enumerate(S.outsect)
+        if i != 1
+            print(io, " ⊗ ")
+        end
+        print(io, g)
+    end
+end

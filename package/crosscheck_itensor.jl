@@ -251,8 +251,8 @@ function check_partial_trace_full()
     a2 = Z3(2)
     K = Obj(e=>1, a=>2, a2=>3)
     L = Obj(e=>2, a=>4, a2=>5)
-    M = Obj(e=>4, a=>5, a2=>4)
-    N = Obj(e=>3, a=>3, a2=>2)
+    M = Obj(e=>2, a=>5, a2=>4)
+    N = Obj(e=>1, a=>3, a2=>2)
     mor = random_mor(Float64, (K, L, M, N))
 
     newmor = VecG_partial_trace(mor, 2)
@@ -287,15 +287,53 @@ function check_square()
     return VecG_square(mora)
 end
 
-Z3 = CyclicGroup(3)
-e = GroupElement(0, Z3)
-a = GroupElement(1, Z3)
-a2 = a*a
+function test_tube()
+    Z3 = CyclicGroup(3)
+    e = GroupElement(0, Z3)
+    a = GroupElement(1, Z3)
+    aa = GroupElement(2, Z3)
+    mor = TubeSector((a,aa,e), a, (aa,a))
+    return mor
+end
+
+function check_tube_random()
+    Z2(i::Int) = GroupElement(i, CyclicGroup(2))
+    e = Z2(0)
+    a = Z2(1)
+    I = Obj(e=>1, a=>1)
+    J = Obj(e=>1, a=>1)
+    mor = random_mor(Float64, (I,), (J,))
+    return mor
+end
+
+function check_tube_zero()
+    Z2(i::Int) = GroupElement(i, CyclicGroup(2))
+    e = Z2(0)
+    a = Z2(1)
+    I = Obj(e=>1, a=>1)
+    J = Obj(e=>1, a=>1)
+    mor = zero_mor(Float64, (I,), (J,))
+    return mor
+end
+
+function check_out_prod()
+    S3 = DihedralGroup(3)
+    e = GroupElement((0,0), S3)
+    s = GroupElement((1,0), S3)
+    r = GroupElement((0,1), S3)
+
+    A = Obj(e=>1, s=>2, r=>3, s*r=>2)
+    B = Obj(e=>2, s=>2, r=>1, s*(r*r)=>1)
+    T1 = random_mor(Float64, (A, A, B))
+    T2 = random_mor(Float64, (A, B, B, A))
+
+    return VecG_outprod(T1, T2)
+end
 # mor = check_partial_trace()
 # check_Z3_svd(Float64)
 # check_Z3_contract()
 # a, b,A, B = check_add()
-TT= check_square()
+# check_Z2_svd()
 # T1 = VecG_tensordot(U, S, (3,),(1,))
 # morp = VecG_tensordot(T1, conj.(V), (3,), (3,))
 

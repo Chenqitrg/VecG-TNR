@@ -47,7 +47,7 @@ end
 
 # Construction function for a morphism
 function Mor(element_type::Type, objects::Tuple{Vararg{Obj{G}}}) where {G<:Group}
-    data = Dict{Tuple{Vararg{GroupElement{G}}}, Array{Any}}()
+    data = Dict{Sector{G}, Array{element_type}}() # Previously the type of the data here does not match the type of data in Mor, but I do not know why there is no error
     return Mor{G,element_type}(objects, data)
 end
 

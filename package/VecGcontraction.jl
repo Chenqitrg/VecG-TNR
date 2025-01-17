@@ -144,6 +144,26 @@ function VecG_square(mor::Mor{G,T}) where {T,G<:Group}
     return VecG_tensordot(mor, VecG_dag(mor), n)
 end
 
+function VecG_outprod(mor1::Mor{G,T}, mor2::Mor{G,T}) where {T,G<:Group}
+    group = get_group(mor1)
+    legs1 = length(mor1.objects)
+    legs2 = length(mor2.objects)
+    e = identity_element(group)
+    objs = (mor1.objects..., mor2.objects...)
+    newmor = Mor(T, objs)
+    for sect in group_tree(e, legs1+legs2)
+        sizeT = get_sector_size(newmor, sect)
+        if multiply(sect[1:legs1])!=identity_element(group) || multiply(sect[legs1+1:legs1+legs2])!=identity_element(group)
+            newmor[sect...] = zeros(T, sizeT)
+        else
+            sect1 = sect[1:legs1]
+            sect2 = sect[legs1+1:legs1+legs2]
+            temp = outer_product(mor1[sect1...], mor2[sect2...])
+            newmor[sect...] = temp
+        end
+    end
+    return newmor
+end
 # Z4 = CyclicGroup(4)
 # e = GroupElement(0, Z4)
 # a = GroupElement(1, Z4)
