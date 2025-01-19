@@ -26,7 +26,7 @@ function TubeMor(element_type::Type, in::Tuple{Vararg{Obj{G}}}, out::Tuple{Varar
 end
 
 # Get the tensor of the S sector
-function Base.getindex(mor::TubeMor{G, T}, S::Sector{G}) where {T, G<:Group}
+function Base.getindex(mor::TubeMor{G, T}, S::TubeSector{G}) where {T, G<:Group}
     return mor.data[S]
 end
 
@@ -37,7 +37,13 @@ end
 
 # Get the group of a morphism
 function get_group(T::TubeMor)
-    return get_group(T.in[1])
+    if length(T.in) >0
+        return get_group(T.in[1])
+    elseif length(T.out) > 0
+        return get_group(T.out[1])
+    else
+        throw(ArgumentError("The case that both out sector and the in sector are empty has not been treated"))
+    end
 end
 
 function Base.getindex(mor::TubeMor{G, T}, S::Sector{G}) where {T, G<:Group}
@@ -69,7 +75,7 @@ function Base.setindex!(mor::TubeMor{G, T}, value::Array{T}, S::TubeSector{G}) w
     terminal_size_in, terminal_size_out = get_sector_size(mor, S)
     data_size = size(value)
     if (terminal_size_in..., terminal_size_out...) != data_size
-        throw(ArgumentError("Data size $data_size does not match sector size $terminal_size"))
+        throw(ArgumentError("Data size $data_size does not match sector size $terminal_size_in, $terminal_size_out"))
     end
     mor.data[S] = value
 end
@@ -100,7 +106,7 @@ function zero_mor(element_type::Type, in::Tuple{Vararg{Obj}}, out::Tuple{Vararg{
         for groups_in in group_iter(group, length(in))
             out_sect = (g_circ * multiply(groups_in)) * inverse(g_circ)
             for groups_out in group_tree(out_sect, length(out))
-                sector = TubeSector(groups_out, g_circ, groups_in)
+                sector = TubeSector(groups_in, g_circ, groups_out)
                 sector_size_in, sector_size_out = get_sector_size(mor, sector)
                 mor[sector] = zeros(element_type, (sector_size_in..., sector_size_out...))
             end
