@@ -168,6 +168,8 @@ function test_to_W()
 end
 
 
+
+
 Z3(i::Int) = GroupElement(i, CyclicGroup(3))
 e = Z3(0)
 a = Z3(1)

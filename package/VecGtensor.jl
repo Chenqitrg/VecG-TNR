@@ -5,20 +5,32 @@ struct VecG{G<:Group}
     group::G
 end
 
+
+"""
+Structure of objects in VecG
+
+# Input: 
+- pairs of the form g=>n
+
+# Output:
+- an object of the form n1g1⊕n2g2⊕n3g3...
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       Obj(e=>1, a=>2, aa=>3)
+
+e⊕2a⊕3aa
+```
+
+"""
 struct Obj{G<:Group}
     sumd::Dict{GroupElement{G}, Int}  # 直接使用 GroupElement 的子类型作为键的类型
 end
-
-struct Sector{G<:Group}
-    sect::Tuple{Vararg{GroupElement{G}}}
-end
-
-struct Mor{G <: Group, T}
-    objects::Tuple{Vararg{Obj{G}}}
-    data::Dict{Sector{G}, Array{T}}
-end
-
-# Construction function of an object in VecG
 function Obj(pairs::Pair{GroupElement{G}, Int}...) where G <: Group
     g0 = first(pairs).first
     group = g0.group
@@ -34,6 +46,18 @@ function Obj(pairs::Pair{GroupElement{G}, Int}...) where G <: Group
     end
     return Obj(sumd)
 end
+
+struct Sector{G<:Group}
+    sect::Tuple{Vararg{GroupElement{G}}}
+end
+
+struct Mor{G <: Group, T}
+    objects::Tuple{Vararg{Obj{G}}}
+    data::Dict{Sector{G}, Array{T}}
+end
+
+# Construction function of an object in VecG
+
 
 # Construction function for a sector
 function Sector(groupelements::GroupElement...)

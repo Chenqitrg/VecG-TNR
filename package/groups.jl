@@ -5,10 +5,35 @@ using IterTools
 
 abstract type Group{T} end
 
+"""
+CyclicGroup(n)
+
+Construct a structure of group ℤn.
+
+# Example
+
+```
+julia> CyclicGroup(4)
+CyclicGroup(4)
+```
+"""
 struct CyclicGroup <: Group{Int}
     n::Int
 end
 
+"""
+DihedralGroup(n)
+
+Construct a structure of group D2n.
+
+# Example
+
+```jldoctest
+
+julia> DihedralGroup(4)
+DihedralGroup(4)
+```
+"""
 struct DihedralGroup <: Group{Tuple{Int,Int}}
     n::Int
 end
@@ -17,18 +42,37 @@ end
 Base.eltype(::Type{<:CyclicGroup}) = Int
 Base.eltype(::Type{<:DihedralGroup}) = Tuple{Int,Int}
 
-# 群元素定义
+"""
+Definition of the structure GroupElement
+"""
 struct GroupElement{G<:Group}
     value::eltype(G)  # 自动根据 Group 类型推断 value 的类型
     group::G
 end
 
 
-# 群元素构造函数，支持循环群和二面体群
+"""
+Construct a group element of group, with value value.
+
+# Parameter:
+- value: label of group element
+- group: abstract group structure
+
+# Example
+
+```jldoctest
+julia> GroupElement(2, CyclicGroup(4))
+GroupElement{CyclicGroup}(2, CyclicGroup(4))
+
+julia> GroupElement((2,1), DihedralGroup(4))
+GroupElement{DihedralGroup}((2,1), DihedralGroup(4))
+
+```
+
+"""
 function GroupElement(value::Any, group::CyclicGroup)
     return GroupElement{CyclicGroup}(mod(value, group.n), group)
 end
-
 function GroupElement(value::Tuple, group::DihedralGroup)
     s, r = value
     return GroupElement{DihedralGroup}((mod(s, 2), mod(r, group.n)), group)
@@ -38,11 +82,21 @@ end
 # Group Operations
 # ===========================================
 
-# 群元素生成函数，多重分派优化
+"""
+Generating the tuple of elements of group.
+
+# Example
+```
+julia> elements(CyclicGroup(3))
+(GroupElement{CyclicGroup}(0,CyclicGroup(3)), GroupElement{CyclicGroup}(1,CyclicGroup(3)), GroupElement{CyclicGroup}(2,CyclicGroup(3)))
+
+julia> elements(DihedralGroup(3))
+(GroupElement{DihedralGroup}((0,0), DihedralGroup(3)), GroupElement{DihedralGroup}((0,1), DihedralGroup(3)), GroupElement{DihedralGroup}((0,2), DihedralGroup(3)), GroupElement{DihedralGroup}((1,0), DihedralGroup(3)), GroupElement{DihedralGroup}((1,1), DihedralGroup(3)), GroupElement{DihedralGroup}((1,2), DihedralGroup(3)))
+```
+"""
 function elements(group::CyclicGroup)::Tuple
     return ntuple(i -> GroupElement(i - 1, group), group.n)
 end
-
 function elements(group::DihedralGroup)::Tuple
     n = group.n
     rotations = ntuple(i -> GroupElement((0, i - 1), group), n)  # (e, r, r², ...)
@@ -50,7 +104,19 @@ function elements(group::DihedralGroup)::Tuple
     return (rotations..., reflections...)  # 将旋转和反射拼接
 end
 
-# 单位元
+"""
+Give the identity element of the group
+
+# Example
+
+```
+julia> identity_element(CyclicGroup(3))
+GroupElement{CyclicGroup}(0, CyclicGroup(3))
+julia> identity_element(DihedralGroup(3))
+GroupElement{DihedralGroup}((0,0),DihedralGroup(3))
+```
+
+"""
 function identity_element(group::CyclicGroup)
     return GroupElement(0, group)
 end
@@ -59,17 +125,36 @@ function identity_element(group::DihedralGroup)
     return GroupElement((0, 0), group)
 end
 
-# 逆元
+"""
+Give the inverse of the element x
+
+# Example
+```
+julia> inverse(GroupElement(1, CyclicGroup(3)))
+GroupElement{CyclicGroup}(2, CyclicGroup(3))
+
+julia> inverse(GroupElement((0,2), DihedralGroup(3)))
+GroupElement{DihedralGroup}((0,1), DihedralGroup(3))
+```
+"""
 function inverse(x::GroupElement{CyclicGroup})
     return GroupElement(-x.value, x.group)
 end
-
 function inverse(x::GroupElement{DihedralGroup})
     s, r = x.value
     return GroupElement((-s, (-1)^(s + 1) * r), x.group)
 end
 
-# 通用乘法接口
+"""
+Overload the multiplication * to group multiplication.
+
+# Example
+```
+
+julia> GroupElement(2, CyclicGroup(3)) * GroupElement(1, CyclicGroup(3))
+GroupElement{CyclicGroup}(0, CyclicGroup(3))
+```
+"""
 function Base.:*(x::GroupElement, y::GroupElement)
     if x.group != y.group
         error("Cannot multiply elements from different groups")
@@ -91,6 +176,16 @@ function group_multiply(x::GroupElement{DihedralGroup}, y::GroupElement{Dihedral
     return GroupElement((mod(s1 + s2, 2), mod((-1)^s2 * r1 + r2, group.n)), group)
 end
 
+"""
+Multiplying a tuple of group elements.
+
+# Example
+
+```
+julia> multiply((GroupElement(1, CyclicGroup(4)), GroupElement(2, CyclicGroup(4))))
+GroupElement{CyclicGroup}(3, CyclicGroup(4))
+```
+"""
 function multiply(elements::Tuple{Vararg{GroupElement}})
     if length(elements) == 0
         error("Cannot multiply an empty tuple of group elements")
@@ -105,6 +200,9 @@ function multiply(elements::Tuple{Vararg{GroupElement}})
     end
 end
 
+"""
+Overload the == to group case.
+"""
 function Base.:(==)(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
     return x.value == y.value
 end
@@ -113,6 +211,31 @@ function Base.:(==)(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGrou
     return x.value == y.value
 end
 
+"""
+```group_tree(g, n)```
+
+Generating an iterator of n-tuple of group elements, such that all elements are multiplied to g.
+
+# Input Parameter:
+
+- g: a group element
+- n: the number of group elements in a tuple
+
+# Example
+
+```
+julia> x = group_tree(GroupElement(0, CyclicGroup(2)), 2)
+
+Base.Generator{Base.Iterators.ProductIterator{Tuple{Tuple{GroupElement{CyclicGroup}, GroupElement{CyclicGroup}}}}, var"#18#20"{GroupElement{CyclicGroup}}}(var"#18#20"{GroupElement{CyclicGroup}}(GroupElement{CyclicGroup}(0, CyclicGroup(2))), Base.Iterators.ProductIterator{Tuple{Tuple{GroupElement{CyclicGroup}, GroupElement{CyclicGroup}}}}(((GroupElement{CyclicGroup}(0, CyclicGroup(2)), GroupElement{CyclicGroup}(1, CyclicGroup(2))),)))
+
+julia> for i in x
+            println(i)
+       end
+
+(GroupElement{CyclicGroup}(0, CyclicGroup(2)), GroupElement{CyclicGroup}(0, CyclicGroup(2)))
+(GroupElement{CyclicGroup}(1, CyclicGroup(2)), GroupElement{CyclicGroup}(1, CyclicGroup(2)))
+```
+"""
 function group_tree(g::GroupElement, n::Int)
     if n < 1
         error("Invalid length of the tuple")
@@ -126,12 +249,33 @@ function group_tree(g::GroupElement, n::Int)
     end
 end
 
+"""
+Generating a iterator, whose terms are n-tuple of group elements.
+
+# Example
+
+```
+julia>  for i in group_iter(CyclicGroup(2), 2)
+            println(i)
+        end
+(GroupElement{CyclicGroup}(0, CyclicGroup(2)), GroupElement{CyclicGroup}(0, CyclicGroup(2)))
+(GroupElement{CyclicGroup}(1, CyclicGroup(2)), GroupElement{CyclicGroup}(0, CyclicGroup(2)))
+(GroupElement{CyclicGroup}(0, CyclicGroup(2)), GroupElement{CyclicGroup}(1, CyclicGroup(2)))
+(GroupElement{CyclicGroup}(1, CyclicGroup(2)), GroupElement{CyclicGroup}(1, CyclicGroup(2)))
+```
+"""
 function group_iter(group::Group, n::Int)
     elem = elements(group)
     return IterTools.product((elem for _ in 1:n)...)
 end
 
-# Helper to verify group axioms
+"""
+Helper to verify group axioms.
+
+# Input:
+- g: group
+
+"""
 function verify_group_axioms(g::Group)
     elts = elements(g)
     println("Verifying Group Axioms for ", typeof(g))
@@ -146,3 +290,4 @@ function verify_group_axioms(g::Group)
     # Inverses
     println("Inverses: ", all(x -> (x * inverse(x)).value == id.value && (inverse(x) * x).value == id.value, elts))
 end
+
