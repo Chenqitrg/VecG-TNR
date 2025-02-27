@@ -111,7 +111,23 @@ function Base.show(io::IO, S::Sector)
     end
 end
 
-# Custom display for Morphism
+"""
+Display a morphism as a list of objects
+
+# Arguments
+- `io::IO`: The output stream
+- `T::Mor`: The morphism to display
+
+# Example
+```julia
+Z4 = CyclicGroup(4)
+e = identity_element(Z4)
+a = GroupElement(1, Z4)
+A = Obj(e=>2, a=>2, a*a=>3, a*a*a=>4)
+T = Mor(Float64, (A, A, A))
+show(stdout, T)
+```
+"""
 function Base.show(io::IO, ::MIME"text/plain", T::Mor)
     println(io, "Group: ", get_group(T))
     for (i, obj) in enumerate(T.objects)

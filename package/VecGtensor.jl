@@ -24,7 +24,7 @@ julia> G = CyclicGroup(3)
        aa = GroupElement(2, G)
        Obj(e=>1, a=>2, aa=>3)
 
-e⊕2a⊕3aa
+e⊕2a⊕3a²
 ```
 
 """
@@ -47,35 +47,22 @@ function Obj(pairs::Pair{GroupElement{G}, Int}...) where G <: Group
     return Obj(sumd)
 end
 
-struct Sector{G<:Group}
-    sect::Tuple{Vararg{GroupElement{G}}}
-end
+"""
+Generating a zero object.
 
-struct Mor{G <: Group, T}
-    objects::Tuple{Vararg{Obj{G}}}
-    data::Dict{Sector{G}, Array{T}}
-end
+# Input:
+- a group
 
-# Construction function of an object in VecG
+# Output:
+- an object with all zero multiplicities
 
+# Example
 
-# Construction function for a sector
-function Sector(groupelements::GroupElement...)
-    group = first(groupelements).group
-    if multiply(groupelements) != identity_element(group)
-        throw(ArgumentError("The sector $groupelements is not consistent"))
-    else
-        return Sector(groupelements)
-    end
-end
+```
+julia> G = CyclicGroup(3)
+       zero_obj(G)
 
-# Construction function for a morphism
-function Mor(element_type::Type, objects::Tuple{Vararg{Obj{G}}}) where {G<:Group}
-    data = Dict{Sector{G}, Array{element_type}}() # Previously the type of the data here does not match the type of data in Mor, but I do not know why there is no error
-    return Mor{G,element_type}(objects, data)
-end
-
-# Construct a zero object
+"""
 function zero_obj(group::G) where G<:Group
     sumd = Dict{GroupElement{G}, Int}()
     el = elements(group)
@@ -85,6 +72,29 @@ function zero_obj(group::G) where G<:Group
     return Obj(sumd)
 end
 
+"""
+Generating a dual object.
+
+# Input:
+- an object
+
+# Output:
+- the dual object, whose multiplicities are the same as the input object, but the group elements are inversed.
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       dual_obj(A)
+
+e⊕3a⊕2a²
+
+```
+"""
 function dual_obj(obj::Obj{G}) where G<:Group
     dualobj = Dict{GroupElement{G}, Int}()
     dict = obj.sumd
@@ -94,11 +104,99 @@ function dual_obj(obj::Obj{G}) where G<:Group
     return Obj(dualobj)
 end
 
+"""
+Comparing two objects.
+"""
 function Base.:(==)(X::Obj{G}, Y::Obj{G}) where G<:Group
     return X.sumd == Y.sumd
 end
 
-# Construct a random morphism for a given objects
+"""
+Structure of sectors in VecG
+
+# Input:
+- a tuple of group elements
+
+# Output:
+- a sector of the form g1⊗g2⊗g3..., such that g1g2g3... = e
+If the sector is not consistent, an error will be thrown.
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement((0,0), G)
+       r = GroupElement((0,1), G)
+       s = GroupElement((1,0), G)
+       Sector(s, r, s*r, e)
+
+s⊗r⊗sr⊗e
+
+```
+"""
+struct Sector{G<:Group}
+    sect::Tuple{Vararg{GroupElement{G}}}
+end
+function Sector(groupelements::GroupElement...)
+    group = first(groupelements).group
+    if multiply(groupelements) != identity_element(group)
+        throw(ArgumentError("The sector $groupelements is not consistent"))
+    else
+        return Sector(groupelements)
+    end
+end
+
+"""
+The key data type in VecG_TNR.
+
+# Components:
+- objects: a tuple of objects
+- data: a dictionary, whose keys are sectors and values are tensors
+
+# Construction function:
+- Mor(element_type, objects)
+## Input:
+- element type: data type, for example Float64, ComplexF64, etc...
+- objects: a tuple of objects
+
+## Output: 
+- an empty tensor, stored by a dictionary, whose key are sectors
+
+"""
+struct Mor{G <: Group, T}
+    objects::Tuple{Vararg{Obj{G}}}
+    data::Dict{Sector{G}, Array{T}}
+end
+function Mor(element_type::Type, objects::Tuple{Vararg{Obj{G}}}) where {G<:Group}
+    data = Dict{Sector{G}, Array{element_type}}() # Previously the type of the data here does not match the type of data in Mor, but I do not know why there is no error
+    return Mor{G,element_type}(objects, data)
+end
+
+"""
+Generating a random morphism for a given objects.
+
+# Input:
+- element type: data type, for example Float64, ComplexF64, etc...
+- objects: a tuple of objects
+
+# Output:
+- a random morphism, whose data are random numbers
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = random_mor(Float64, (A, B, C, D))
+         The data is too long to show. 
+```
+"""
 function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
     group = get_group(mor)
@@ -111,7 +209,31 @@ function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     return mor
 end
 
-# Construct a random morphism for a given objects
+"""
+Generating a zero morphism for a given objects.
+
+# Input:
+- element type: data type, for example Float64, ComplexF64, etc...
+- objects: a tuple of objects
+
+# Output:
+- a zero morphism, whose data are all zeros
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = zero_mor(Float64, (A, B, C, D))
+         The data is too long to show.
+```
+"""
 function zero_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
     group = get_group(mor)
@@ -124,6 +246,27 @@ function zero_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     return mor
 end
 
+"""
+Generating an identity morphism for a given object.
+
+# Input:
+- element type: data type, for example Float64, ComplexF64, etc...
+- object: an object
+
+# Output:
+- an identity morphism, whose data are identity matrices
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       identity_mor(Float64, A)
+```
+"""
 function identity_mor(element_type::Type, object::Obj)
     dual = dual_obj(object)
     group = get_group(object)
@@ -137,25 +280,140 @@ function identity_mor(element_type::Type, object::Obj)
 end
 
 # Get the group that the object belongs to
+"""
+Get the group that the object belongs to
+
+# Input:
+- an object
+
+# Output:
+- the group that the object belongs to
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       get_group(A)
+```
+"""
 function get_group(ob::Obj)
     return first(keys(ob.sumd)).group
 end
 
-# Get the direct summand multiplicity
+"""
+Get the multiplicity of a group element in an object
+
+# Input:
+- an object
+- a group element
+
+# Output:
+- the multiplicity of the group element in the object
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       A[a]
+       2
+```
+"""
 function Base.getindex(obj::Obj{G}, key::GroupElement{G}) where G<:Group
     return get(obj.sumd, key, 0)  # 如果键不存在，默认返回 0
 end
 
+
+"""
+Set the multiplicity of a group element in an object
+
+# Input:
+- an object
+- the multiplicity
+- a group element
+
+# Output:
+- the object with the multiplicity of the group element set
+
+# Example
+
+```
+
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       A[a] = 5
+       e⊕5a⊕3a²
+```
+"""
 function Base.setindex!(obj::Obj{G}, multiplicity::Int, key::GroupElement{G}) where G<:Group
     obj.sumd[key] = multiplicity
 end
 
-# Get the group of a morphism
+
+"""
+Get the group of a morphism
+
+# Input:
+- a morphism
+
+# Output:
+- the group of the morphism
+
+# Example
+
+```
+
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = Mor(Float64, (A, B, C, D))
+       get_group(T)
+       ℤ₃
+```
+"""
 function get_group(T::Mor)
     return get_group(T.objects[1])
 end
 
-# Get the key-th group element
+
+"""
+Get the key-th group element in a sector
+
+# Input:
+- a sector
+- the index
+
+# Output:
+- the key-th group element in the sector
+
+# Example
+
+```
+
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       S = Sector(e, a, aa)
+       S[2]
+       a
+```
+"""
 function Base.getindex(S::Sector, key::Int)
     return get(S.sect, key, 0)  # 如果键不存在，默认返回 0
 end

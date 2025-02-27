@@ -1,6 +1,13 @@
 include("../package/main.jl")
-using .VecG_TNR
 include("../initialization.jl")
+using .VecG_TNR
+
+# typeof(VecG_TNR)
+# typeof(CyclicGroup)
+# typeof(GroupElement)
+
+
+
 
 # --1--L--2--leg--mor---- = --leg--mor--1--newL--2--
 function single_step_QR(L::Mor{G, T}, mor::Mor{G, T}, leg::Int)  where {T, G<:Group}
@@ -97,31 +104,33 @@ end
 function coarse_graining(morA::Mor{G, T}, morB::Mor{G, T}, Dcut::Int, epsilon::Float64) where {T, G<:Group}
     ALU, ARD = VecG_factorize(morA, (1,2), Dcut, epsilon)
     BRU, BLD = VecG_factorize(morB, (2,3), Dcut, epsilon)
-    newLU = VecG_tensordot(BRU, ARD, (1,), (2,))
-    newRD = VecG_tensordot(BLD, ALU, (1,), (2,))
-    newmor = VecG_tensordot(newLU, newRD, (4,1), (4,1))
+    newL = VecG_tensordot(BRU, ARD, (1,), (2,))
+    newR = VecG_tensordot(BLD, ALU, (1,), (2,))
+    @show newL.objects
+    @show newR.objects
+    newmor = VecG_tensordot(newL, newR, (4,1), (1,4))
     Omega = max_abs(newmor)
     return newmor./Omega
 end
 
-# function Gilt(morA::Mor{G, T}, morB::Mor{G, T}, epsilon::Float64) where {T, G<:Group}
-#     Env = VecG_tensordot(morA, morB, (4,), (2,))
-#     Env = VecG_tensordot(Env, morA, (6,), (3,))
-#     Env = VecG_tensordot(Env, morB, (8,), (4,))
-#     U, S, _ = VecG_svd(Env, (10, 1))
-#     t = []
+# # function Gilt(morA::Mor{G, T}, morB::Mor{G, T}, epsilon::Float64) where {T, G<:Group}
+# #     Env = VecG_tensordot(morA, morB, (4,), (2,))
+# #     Env = VecG_tensordot(Env, morA, (6,), (3,))
+# #     Env = VecG_tensordot(Env, morB, (8,), (4,))
+# #     U, S, _ = VecG_svd(Env, (10, 1))
+# #     t = []
 
-# end
+# # end
 
-# beta = log(sqrt(2)+1)/2
+beta = log(sqrt(2)+1)/2
 
-# mor = ising(1.01 * beta)
+mor = ising(1.01 * beta)
 
-# for n = 1:100
-#     global mor
-#     println("n = $n")
-#     morA, morB = entanglement_filtering(mor, mor, 10, 1e-12)
-#     mor = coarse_graining(morA, morB, 32, 1e-15)
-# end
+for n = 1:100
+    global mor
+    println("n = $n")
+    morA, morB = entanglement_filtering(mor, mor, 10, 1e-12)
+    mor = coarse_graining(morA, morB, 32, 1e-15)
+end
 
-# @show mor
+@show mor
