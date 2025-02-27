@@ -1,10 +1,6 @@
-include("package/groups.jl")
-include("package/block_matrix_calculation.jl")
-include("package/VecGtensor.jl")
-include("package/VecGdecomposition.jl")
-include("package/VecGcontraction.jl")
-include("initialization.jl")
-include("package/display.jl")
+include("../package/main.jl")
+using .VecG_TNR
+include("../initialization.jl")
 
 # --1--L--2--leg--mor---- = --leg--mor--1--newL--2--
 function single_step_QR(L::Mor{G, T}, mor::Mor{G, T}, leg::Int)  where {T, G<:Group}

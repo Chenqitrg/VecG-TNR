@@ -1,4 +1,6 @@
-# Custom display for a group
+"""
+Display CyclicGroup(n) as ℤₙ and display DihedralGroup(n) as 𝔻₂ₙ
+"""
 function Base.show(io::IO, G::Group)
     if G isa CyclicGroup
         print(io, "ℤ", subscript(G.n))
