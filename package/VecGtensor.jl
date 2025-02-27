@@ -419,32 +419,164 @@ function Base.getindex(S::Sector, key::Int)
 end
 
 # Get the object of the i-th leg
+"""
+Get the object of the i-th leg
+
+# Input:
+- a morphism
+- the index
+
+# Output:
+- the object of the i-th leg
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = Mor(Float64, (A, B, C, D))
+       T[1]
+       e ⊕ 2a ⊕ 3a²
+```
+"""
 function Base.getindex(T::Mor, i::Int)
     return T.objects[i]
 end
 
+"""
+Get the number of legs in a morphism
+
+# Input:
+- a morphism
+
+# Output:
+- the number of legs in the morphism
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = Mor(Float64, (A, B, C, D))
+        lastindex(T)
+       4
+```
+"""
 function Base.lastindex(T::Mor)
     return length(T.objects)
 end
 
 
-# Get the object of the leg within the range
+"""
+Get a vector of objects in a morphism
+
+# Input:
+- a morphism
+- a range
+
+# Output:
+- a vector of objects in the morphism
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = Mor(Float64, (A, B, C, D))
+       T[1:2]
+       (e ⊕ 2a ⊕ 3a², e ⊕ 3a ⊕ 2a²)
+```
+"""
 function Base.getindex(mor::Mor, range::UnitRange{Int})
     return mor.objects[range]
 end
 
-# Get the tensor of the g... sector
+"""
+Get the tensor of the sector
+
+# Input:
+- a morphism
+- a sector
+
+# Output:
+- the tensor of the sector
+
+Both the form T[S] and T[S.sect], which can be, for example T[g,h,k,l], are supported.
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = Mor(Float64, (A, B, C, D))
+       S = Sector(e, a, aa)
+       T[S]
+       T[e,a,aa]
+```
+
+"""
 function Base.getindex(mor::Mor, g::GroupElement...)
     S = Sector(g)
     return mor.data[S]
 end
-
-# Get the tensor of the S sector
 function Base.getindex(mor::Mor{G, T}, S::Sector{G}) where {T, G<:Group}
     return mor.data[S]
 end
 
-# Get the size of a morphism at a given sector
+"""
+Get the size of the tensor for a given sector
+
+# Input:
+- a morphism
+- a tuple of group elements or a sector
+
+# Output:
+- the size of the tensor for the sector constructed by the tuple of group elements
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = random_mor(Float64, (A, B, C, D))
+       get_sector_size(T, (e, a, aa, e))
+       (1, 3, 3, 2)
+
+julia> S = Sector(e, a, aa, e)
+    get_sector_size(T, S)
+    (1, 3, 3, 2)
+```
+"""
 function get_sector_size(mor::Mor{G, T}, tup::Tuple{Vararg{GroupElement{G}}}) where {T, G<:Group}
     group = get_group(mor)
     if multiply(tup) != identity_element(group)
@@ -459,21 +591,47 @@ function get_sector_size(mor::Mor{G, T}, tup::Tuple{Vararg{GroupElement{G}}}) wh
         return size
     end
 end
-
-# Get the size of the tensor for a given sector
 function get_sector_size(mor::Mor{G, T}, sector::Sector{G}) where {T, G<:Group}
     return get_sector_size(mor, sector.sect)
 end
 
-function Base.setindex!(mor::Mor{G, T}, obj::Obj{G}, i::Int) where {T, G<:Group}
-    group = get_group(obj)
-    for g in elements(group)
-        mor[i][g] = obj[g]
-    end
-end
+# So far it seems to be a good idea to delete the following function
+# function Base.setindex!(mor::Mor{G, T}, obj::Obj{G}, i::Int) where {T, G<:Group}
+#     group = get_group(obj)
+#     for g in elements(group)
+#         mor[i][g] = obj[g]
+#     end
+# end
 
 
-# Set a specific block
+"""
+Set the morphism to a given array for a given sector
+
+# Input:
+- a morphism
+- an array
+- a tuple of group elements or a sector
+
+# Output:
+- the morphism with the tensor set to the array for the sector constructed by the tuple of group elements
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = random_mor(Float64, (A, B, C, D))
+       T[e,a,aa,e] = rand(1,3,3,2)
+julia> S = Sector(e, a, aa, e)
+       T[S] = rand(1,3,3,2)
+```
+"""
 function Base.setindex!(mor::Mor{G, T}, value::Array{T}, g::GroupElement{G}...) where {T, G <: Group}
     terminal_size = get_sector_size(mor, g)
     data_size = size(value)
@@ -482,8 +640,6 @@ function Base.setindex!(mor::Mor{G, T}, value::Array{T}, g::GroupElement{G}...) 
     end
     mor.data[Sector(g)] = value
 end
-
-# Set a specific sector
 function Base.setindex!(mor::Mor{G, T}, value::Array{T}, S::Sector{G}) where {T, G <: Group}
     terminal_size = get_sector_size(mor, S)
     data_size = size(value)
@@ -493,7 +649,28 @@ function Base.setindex!(mor::Mor{G, T}, value::Array{T}, S::Sector{G}) where {T,
     mor.data[S] = value
 end
 
+# Here is bug
+"""
+Judge whether a tuple is in an accending order.
 
+# Input:
+- a tuple of integers
+- a modulus
+
+# Output:
+- a boolean value, indicating whether the tuple is in an accending order
+It reports false if the tuple is not in an accending order or the elements are not in the range of 1 to modn.
+
+# Example
+
+```
+julia> is_accend((1,2,3,4), 4)
+       true
+
+julia> is_accend((4,1), 4)
+    true
+```
+"""
 function is_accend(tup::Tuple{Vararg{Int}}, modn::Int)
     test = true
     for i = 1 : length(tup)-1
@@ -504,10 +681,32 @@ function is_accend(tup::Tuple{Vararg{Int}}, modn::Int)
     return test
 end
 
-function is_decend(tup::Tuple{Vararg{Int}}, modn::Int)
+"""
+Judge whether a tuple is in a descending order.
+
+# Input:
+- a tuple of integers
+- a modulus
+
+# Output:
+- a boolean value, indicating whether the tuple is in a descending order
+It reports false if the tuple is not in a descending order or the elements are not in the range of 1 to modn.
+
+# Example
+
+```
+julia> is_descend((4,3,2,1), 4)
+       true
+
+julia> is_descend((4,1), 4) 
+         false
+
+```
+"""
+function is_descend(tup::Tuple{Vararg{Int}}, modn::Int)
     test = true
     for i = 1 : length(tup)-1
-        if !(tup[i] in 1:modn) || !(tup[i+1] in 1:modn) || tup[i+1] != (mod(tup[i], modn) - 1)
+        if (!(tup[i] in 1:modn)) || (!(tup[i+1] in 1:modn)) || (mod(tup[i+1], modn) != (tup[i] - 1))
             test = false
         end
     end

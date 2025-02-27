@@ -87,8 +87,38 @@ function test_Mor_Z2()
     @show Mat2 = identity_mor(Float64, B) # Mor{CyclicGroup, Float64}((e ⊕ a, e ⊕ a), Dict{Sector{CyclicGroup}, Array{Float64}}(e ⊗ e => [1.0;;], a ⊗ a => [1.0;;]))
 end
 
+function test_get_indices()
+    D6 = DihedralGroup(3)
+    e = identity_element(D6)
+    s = GroupElement((1,0), D6)
+    r = GroupElement((0,1), D6)
+    A = Obj(e=>2, s=>3, r=>2, s*r=>15) 
+    B = Obj(e=>2, s=>4, r=>3, s*r=>2)
+    C = Obj(e=>2, s=>3, r=>2, s*r=>2)
+    D = Obj(e=>2, s=>4, r=>3, s*r*r=>15)
+    T = random_mor(Float64, (A, B, C, D))
+
+    @show T[e,e,e,e] # 2×2×2×2 Array{Float64,4}
+    @show T[1] # 2e ⊕ 2r ⊕ 3s ⊕ 15sr
+    @show T[2] # 2e ⊕ 3r ⊕ 4s ⊕ 2sr
+    @show T[2:3] # (2e ⊕ 3r ⊕ 4s ⊕ 2sr, 2e ⊕ 2r ⊕ 3s ⊕ 2sr)
+    @show T[end] # 2e ⊕ 3r ⊕ 4s ⊕ 15sr²
+    @show lastindex(T) # 4
+    @show get_sector_size(T, (e,e,e,e)) # (2, 2, 2, 2)
+    @show size = get_sector_size(T, (e,s,s,e)) # (2, 4, 3, 2)
+    # @show get_sector_size(T, (e,s,r,e)) ERROR: ArgumentError: The sector (e, s, r, e) is not consistent
+    S = Sector(e, s, s, e)
+    @show T[S] = rand(size...) # The data is too long to show. Random data is generated and assigned to the sector (e, s, s, e)
+
+end
+
+function test_accend()
+    @show is_accend((4,1), 4)
+end
 # test_group()
 # test_obj()
 # test_sector()
 # test_Mor()
-test_Mor_Z2()
+# test_Mor_Z2()
+# test_get_indices()
+test_accend()
