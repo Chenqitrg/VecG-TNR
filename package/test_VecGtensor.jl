@@ -23,6 +23,41 @@ function test_group()
     @show r*r # r²
     @show r*r*r # r³
     @show r * s # sr²
+
+    @show Z2xZ4 = ProductGroup(Z2, Z4) # ℤ₂ × ℤ₄
+    @show ProductGroup(D6, Z2) # 𝔻₆ × ℤ₂
+
+    aZ2 = GroupElement(1, Z2)
+    eZ4 = identity_element(Z4)
+    @show ae = GroupElement((aZ2, eZ4), ProductGroup(Z2, Z4)) # (a, e)
+    @show sa = GroupElement((s, aZ2), ProductGroup(D6, Z2)) # (s, a)
+    @show iter = elements(Z2xZ4)
+    @show collect(iter) # Tuple{GroupElement{CyclicGroup}, GroupElement{CyclicGroup}}[(e, e) (e, a) (e, a²) (e, a³); (a, e) (a, a) (a, a²) (a, a³)]
+    @show iter = elements(ProductGroup(D6, Z2))
+    @show collect(iter) # Tuple{GroupElement{DihedralGroup}, GroupElement{CyclicGroup}}[(e, e) (e, a); (r, e) (r, a); (r², e) (r², a); (s, e) (s, a); (sr, e) (sr, a); (sr², e) (sr², a)]
+    @show identity_element(Z2xZ4) # (e, e)
+    @show identity_element(ProductGroup(D6, Z2)) # (e, e)
+    @show inverse(ae) # (a³, e)
+    @show inverse(sa) # (s, a³)
+    @show ae * inverse(ae) # (e, e)
+    @show sa * inverse(sa) # (e, e)
+    @show sa * sa # (s, a) * (s, a) = (s*s, a*a) = (e, a²)
+    @show sa * sa == GroupElement((e, aZ2*aZ2), ProductGroup(D6, Z2)) # true
+    @show Z2Z2Z2 = ProductGroup(Z2, Z2, Z2) # ℤ₂ × ℤ₂ × ℤ₂
+    @show identity_element(Z2Z2Z2) # (e, e, e)
+    # @show inverse(GroupElement((a, a, a), Z2Z2Z2)) ERROR: Element a is not in group ℤ₂
+    
+    @show inverse(GroupElement((aZ2, aZ2, aZ2), Z2Z2Z2)) # (a, a, a)
+    aaa = GroupElement((aZ2, aZ2, aZ2), Z2Z2Z2)
+    eee = identity_element(Z2Z2Z2)
+    @show aaa * aaa # (a, a, a) * (a, a, a) = (a*a, a*a, a*a) = (e, e, e)
+    @show aaa * aaa == identity_element(Z2Z2Z2) # true
+    @show multiply((aaa, aaa, eee, aaa)) # (a, a, a)
+    Z2Z2 = ProductGroup(Z2, Z2)
+    @show x = elements(Z2Z2)
+    @show ee = x[1] # (e, e)
+    @show iter = collect(group_tree(ee, 2))
+    @show collect(group_tree(eee, 2))
 end
 
 function test_obj()
@@ -114,11 +149,22 @@ end
 
 function test_accend()
     @show is_accend((4,1), 4)
+    @show is_accend((4,1,2), 4)
+    @show is_accend((4,1,2,3), 4)
+    @show is_accend((4,1,2,3,4), 4)
+    @show is_accend((1,2), 4)
+    @show is_accend((1,2,3), 4)
+    @show is_accend((1,2,3,4), 4)
+    @show is_accend((1,2,4,1), 4) # false
+    @show is_descend((4,1), 4) # false
+    @show is_descend((3,2,1), 4) 
+    @show is_descend((2,1,4), 4)
+    @show is_descend((4,3,2), 4)
 end
-# test_group()
+test_group()
 # test_obj()
 # test_sector()
 # test_Mor()
 # test_Mor_Z2()
 # test_get_indices()
-test_accend()
+# test_accend()

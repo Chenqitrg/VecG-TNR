@@ -1,15 +1,36 @@
 """
 Display CyclicGroup(n) as ℤₙ and display DihedralGroup(n) as 𝔻₂ₙ
+Display a ProductGroup as G₁ × G₂ × ... × Gₙ
 """
 function Base.show(io::IO, G::Group)
     if G isa CyclicGroup
         print(io, "ℤ", subscript(G.n))
     elseif G isa DihedralGroup
         print(io, "𝔻", subscript(2 * G.n))
+    elseif G isa ProductGroup
+        print(io, join(G.groups, " × "))
     end
 end
 
 # Custom display for a group element in a CyclicGroup
+"""
+Display a group element in a CyclicGroup as aⁿ
+
+# Arguments
+- `io::IO`: The output stream
+- `x::GroupElement{CyclicGroup}`: The group element to display
+
+# Example
+```
+julia> Z4 = CyclicGroup(4)
+        x = GroupElement(1, Z4)
+        @show x
+        a
+
+julia> @show x * x
+        a²
+```
+"""
 function Base.show(io::IO, x::GroupElement{CyclicGroup})
     if x.value == 0
         print(io, "e")
@@ -20,7 +41,23 @@ function Base.show(io::IO, x::GroupElement{CyclicGroup})
     end
 end
 
+
 # Custom display for a group element in a DihedralGroup
+"""
+Display a group element in a DihedralGroup as srⁿ
+
+# Arguments
+- `io::IO`: The output stream
+- `x::GroupElement{DihedralGroup}`: The group element to display
+
+# Example
+```
+julia> D6 = DihedralGroup(3)
+        x = GroupElement((1, 2), D6)
+        @show x
+        sr²
+```
+"""
 function Base.show(io::IO, x::GroupElement{DihedralGroup})
     s, r = x.value
     if s == 0 && r == 0
@@ -38,6 +75,10 @@ function Base.show(io::IO, x::GroupElement{DihedralGroup})
     end
 end
 
+function Base.show(io::IO, x::GroupElement{ProductGroup})
+    print(io, "(", join(x.value, ", "), ")")
+    
+end
 
 function subscript(n::Integer)
     # 定义一个映射，将字符 '0'-'9' 转换为 Unicode 下角标字符

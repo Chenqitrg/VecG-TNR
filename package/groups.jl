@@ -2,6 +2,7 @@
 # Abstract Group and Group Element Definitions
 # ===========================================
 using IterTools
+using Base.Iterators: product
 
 abstract type Group{T} end
 
@@ -38,12 +39,46 @@ struct DihedralGroup <: Group{Tuple{Int,Int}}
     n::Int
 end
 
-# 辅助函数，用于获取 Group 的值类型
+"""
+ProductGroup(groups...)
+
+Construct a structure of group G₁ × G₂ × ... × Gₙ.
+
+# Example
+
+```jldoctest
+julia> ProductGroup(CyclicGroup(2), CyclicGroup(3))
+ProductGroup((CyclicGroup(2), CyclicGroup(3)))
+```
+"""
+struct ProductGroup <: Group{Tuple{Vararg{Group}}}
+    groups::Tuple{Vararg{Group}}
+    function ProductGroup(groups::Group...)
+        return new(groups)
+    end
+end
+
+
+
+"""
+Get the element type of the group.
+"""
 Base.eltype(::Type{<:CyclicGroup}) = Int
 Base.eltype(::Type{<:DihedralGroup}) = Tuple{Int,Int}
+Base.eltype(::Type{<:ProductGroup}) = Tuple{Vararg{Group}}
 
 """
 Definition of the structure GroupElement
+
+# Example
+
+```jldoctest
+julia> GroupElement(2, CyclicGroup(4))
+GroupElement{CyclicGroup}(2, CyclicGroup(4))
+
+julia> GroupElement((2,1), DihedralGroup(4))
+GroupElement{DihedralGroup}((2,1), DihedralGroup(4))
+```
 """
 struct GroupElement{G<:Group}
     value::eltype(G)  # 自动根据 Group 类型推断 value 的类型
@@ -67,6 +102,9 @@ GroupElement{CyclicGroup}(2, CyclicGroup(4))
 julia> GroupElement((2,1), DihedralGroup(4))
 GroupElement{DihedralGroup}((2,1), DihedralGroup(4))
 
+julia> GroupElement((GroupElement(2, CyclicGroup(4), GroupElement((2,1), DihedralGroup(4)))), ProductGroup(CyclicGroup(4), DihedralGroup(4)))
+GroupElement{ProductGroup}((GroupElement{CyclicGroup}(2, CyclicGroup(4)), GroupElement{DihedralGroup}((2,1), DihedralGroup(4))), ProductGroup((CyclicGroup(4), DihedralGroup(4)))
+
 ```
 
 """
@@ -77,6 +115,18 @@ function GroupElement(value::Tuple, group::DihedralGroup)
     s, r = value
     return GroupElement{DihedralGroup}((mod(s, 2), mod(r, group.n)), group)
 end
+function GroupElement(values, group::ProductGroup)
+    for (value, g) in zip(values, group.groups)
+        if !(value isa GroupElement)
+            error("Each element in the tuple must be a GroupElement")
+        end
+        if value.group != g
+            error("Element $value is not in group $g")
+        end
+    end
+    return GroupElement{ProductGroup}(values, group) 
+end
+
 
 # ===========================================
 # Group Operations
@@ -92,6 +142,9 @@ julia> elements(CyclicGroup(3))
 
 julia> elements(DihedralGroup(3))
 (GroupElement{DihedralGroup}((0,0), DihedralGroup(3)), GroupElement{DihedralGroup}((0,1), DihedralGroup(3)), GroupElement{DihedralGroup}((0,2), DihedralGroup(3)), GroupElement{DihedralGroup}((1,0), DihedralGroup(3)), GroupElement{DihedralGroup}((1,1), DihedralGroup(3)), GroupElement{DihedralGroup}((1,2), DihedralGroup(3)))
+
+julia> elements(ProductGroup(CyclicGroup(2), CyclicGroup(2)))
+((GroupElement{CyclicGroup}(0, CyclicGroup(2)), GroupElement{CyclicGroup}(1, CyclicGroup(2))), (GroupElement{CyclicGroup}(0, CyclicGroup(2)), GroupElement{CyclicGroup}(1, CyclicGroup(2))))
 ```
 """
 function elements(group::CyclicGroup)::Tuple
@@ -102,6 +155,11 @@ function elements(group::DihedralGroup)::Tuple
     rotations = ntuple(i -> GroupElement((0, i - 1), group), n)  # (e, r, r², ...)
     reflections = ntuple(i -> GroupElement((1, i - 1), group), n)  # (s, sr, sr², ...)
     return (rotations..., reflections...)  # 将旋转和反射拼接
+end
+function elements(group::ProductGroup)
+    group_elements = elements.(group.groups)
+    cartesian_product = collect(Iterators.product(group_elements...))
+    return Tuple(GroupElement(e, group) for e in cartesian_product)
 end
 
 """
@@ -114,15 +172,19 @@ julia> identity_element(CyclicGroup(3))
 GroupElement{CyclicGroup}(0, CyclicGroup(3))
 julia> identity_element(DihedralGroup(3))
 GroupElement{DihedralGroup}((0,0),DihedralGroup(3))
+julia> identity_element(ProductGroup(CyclicGroup(3), DihedralGroup(3)))
+GroupElement{ProductGroup}((GroupElement{CyclicGroup}(0, CyclicGroup(3)), GroupElement{DihedralGroup}((0,0), DihedralGroup(3))), ProductGroup((CyclicGroup(3), DihedralGroup(3)))
 ```
 
 """
 function identity_element(group::CyclicGroup)
     return GroupElement(0, group)
 end
-
 function identity_element(group::DihedralGroup)
     return GroupElement((0, 0), group)
+end
+function identity_element(group::ProductGroup)
+    return GroupElement((identity_element(g) for g in group.groups), group) 
 end
 
 """
@@ -135,6 +197,9 @@ GroupElement{CyclicGroup}(2, CyclicGroup(3))
 
 julia> inverse(GroupElement((0,2), DihedralGroup(3)))
 GroupElement{DihedralGroup}((0,1), DihedralGroup(3))
+
+julia> inverse(GroupElement((GroupElement(1, CyclicGroup(3)), GroupElement((0,2), DihedralGroup(3))), ProductGroup(CyclicGroup(3), DihedralGroup(3)))
+GroupElement{ProductGroup}((GroupElement{CyclicGroup}(2, CyclicGroup(3)), GroupElement{DihedralGroup}((0,1), DihedralGroup(3))), ProductGroup((CyclicGroup(3), DihedralGroup(3)))
 ```
 """
 function inverse(x::GroupElement{CyclicGroup})
@@ -143,6 +208,9 @@ end
 function inverse(x::GroupElement{DihedralGroup})
     s, r = x.value
     return GroupElement((-s, (-1)^(s + 1) * r), x.group)
+end
+function inverse(x::GroupElement{ProductGroup})
+    return GroupElement(inverse.(x.value), x.group)
 end
 
 """
@@ -162,18 +230,60 @@ function Base.:*(x::GroupElement, y::GroupElement)
     return group_multiply(x, y)
 end
 
-# 循环群的乘法
+"""
+group_multiply(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
+
+Multiplying two group elements of cyclic group.
+
+# Example
+
+```
+julia> group_multiply(GroupElement(2, CyclicGroup(3)), GroupElement(1, CyclicGroup(3)))
+GroupElement{CyclicGroup}(0, CyclicGroup(3))
+```
+"""
 function group_multiply(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
     group = x.group
     return GroupElement(x.value + y.value, group)
 end
 
-# 二面体群的乘法
+"""
+group_multiply(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
+
+Multiplying two group elements of dihedral group.
+
+# Example
+
+```
+julia> group_multiply(GroupElement((0,1), DihedralGroup(3)), GroupElement((1,0), DihedralGroup(3)))
+GroupElement{DihedralGroup}((1,2), DihedralGroup(3))
+```
+"""
 function group_multiply(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
     group = x.group
     s1, r1 = x.value
     s2, r2 = y.value
     return GroupElement((mod(s1 + s2, 2), mod((-1)^s2 * r1 + r2, group.n)), group)
+end
+
+"""
+group_multiply(x::GroupElement{ProductGroup}, y::GroupElement{ProductGroup})
+
+Multiplying two group elements of product group.
+
+# Example
+
+```
+julia> group_multiply(GroupElement((GroupElement(1, CyclicGroup(3)), GroupElement((0,1), DihedralGroup(3))), ProductGroup(CyclicGroup(3), DihedralGroup(3))), GroupElement((GroupElement(2, CyclicGroup(3)), GroupElement((1,2), DihedralGroup(3))), ProductGroup(CyclicGroup(3), DihedralGroup(3)))
+GroupElement{ProductGroup}((GroupElement{CyclicGroup}(0, CyclicGroup(3)), GroupElement{DihedralGroup}((1,0), DihedralGroup(3))), ProductGroup((CyclicGroup(3), DihedralGroup(3)))
+```
+"""
+function group_multiply(x::GroupElement{ProductGroup}, y::GroupElement{ProductGroup})
+    newelement = ()
+    for (x1, y1) in zip(x.value, y.value)
+        newelement = (newelement..., x1 * y1)
+    end
+    return GroupElement(newelement, x.group)
 end
 
 """
@@ -206,9 +316,17 @@ Overload the == to group case.
 function Base.:(==)(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
     return x.value == y.value
 end
-
 function Base.:(==)(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
     return x.value == y.value
+end
+function Base.:(==)(x::GroupElement{ProductGroup}, y::GroupElement{ProductGroup})
+    bool = true
+    for (gx, gy) in zip(x.value, y.value)
+        if gx != gy
+            bool = false
+        end
+    end
+    return bool
 end
 
 """
@@ -245,7 +363,7 @@ function group_tree(g::GroupElement, n::Int)
         group = g.group  # 从 g 中推断所属群
         elem = elements(group)
         tup = IterTools.product((elem for _ in 1:(n-1))...)
-        return Iterators.map(x -> (x..., inverse(inverse(g) * multiply(x))), tup)
+        return Iterators.map(x -> (x..., inverse(inverse(g) * multiply(x))), tup) # Has bug
     end
 end
 

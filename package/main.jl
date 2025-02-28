@@ -1,7 +1,7 @@
 module VecG_TNR
 using LinearAlgebra
 # using Revise
-export Group, CyclicGroup, DihedralGroup, GroupElement, elements, identity_element, inverse, multiply, group_tree, group_iter
+export Group, CyclicGroup, DihedralGroup, ProductGroup, GroupElement, elements, identity_element, inverse, multiply, group_tree, group_iter
 export block_matrix_svd, block_matrix_qr, partial_trace, outer_product
 export Obj, Sector, Mor, zero_obj, dual_obj, random_mor, zero_mor, identity_mor, get_group, get_sector_size, VecG_permutedims, VecG_dag, max_abs, is_accend, is_descend
 export VecG_svd, VecG_qr
