@@ -178,12 +178,12 @@ function test_Mor()
     # @show T[e,e,e,e] ERROR: KeyError: key e ⊗ e ⊗ e ⊗ e not found
     @show T[e,e,e,e] = rand(2,2,2,2)
     # @show T[e,e,e,e] = rand(2,3,2,3) ERROR: ArgumentError: Data size (2, 3, 2, 3) does not match sector size (2, 2, 2, 2)
-    @show T # The data is too long to show. The e ⊗ e ⊗ e ⊗ e sector is rand(2,2,2,2) given above
-    @show T[e,s,s,e]  = rand(2,4,3,2)
-    @show T # The data is too long to show. The e ⊗ s ⊗ s ⊗ e sector is rand(2,4,3,2) given above
+    # @show T # The data is too long to show. The e ⊗ e ⊗ e ⊗ e sector is rand(2,2,2,2) given above
+    # @show T[e,s,s,e]  = rand(2,4,3,2)
+    # @show T # The data is too long to show. The e ⊗ s ⊗ s ⊗ e sector is rand(2,4,3,2) given above
     @show TT = random_mor(Float64, (A, B, C, D)) # The data is too long to show. Random morphism is generated   
-    @show TT = zero_mor(Float64, (A, B, C, D)) # The data is too long to show. Zero morphism is generated
-    @show Mat = identity_mor(Float64, A) # The data is too long to show. Identity morphism is generated
+    # @show TT = zero_mor(Float64, (A, B, C, D)) # The data is too long to show. Zero morphism is generated
+    # @show Mat = identity_mor(Float64, A) # The data is too long to show. Identity morphism is generated
 
     
 end
@@ -195,9 +195,22 @@ function test_Mor_Z2()
     B = Obj(e=>1, a=>1)
     C = Obj(e=>1, a=>1)
     @show T = random_mor(Float64, (B,C))
+    @show zero_mor(Float64, (B,C))
     A = Obj(e=>2)
     @show Mat = identity_mor(Float64, A) # Mor{CyclicGroup, Float64}((2e, 2e), Dict{Sector{CyclicGroup}, Array{Float64}}(e ⊗ e => [1.0 0.0; 0.0 1.0], a ⊗ a => Matrix{Float64}(undef, 0, 0)))
     @show Mat2 = identity_mor(Float64, B) # Mor{CyclicGroup, Float64}((e ⊕ a, e ⊕ a), Dict{Sector{CyclicGroup}, Array{Float64}}(e ⊗ e => [1.0;;], a ⊗ a => [1.0;;]))
+end
+
+function test_Mor_D6()
+    D6 = DihedralGroup(3)
+    e = identity_element(D6)
+    s = GroupElement((1,0), D6)
+    r = GroupElement((0,1), D6)
+    A = Obj(e=>1, s=>1, r=>2, s*r=>1)
+    B = Obj(e=>1, s=>1, r*r=>1, s*r=>1)
+    @show T = random_mor(Float64, (A,B))
+    @show zero_mor(Float64, (A,B))
+    @show identity_mor(Float64, A)
 end
 
 function test_get_indices()
@@ -205,20 +218,20 @@ function test_get_indices()
     e = identity_element(D6)
     s = GroupElement((1,0), D6)
     r = GroupElement((0,1), D6)
-    A = Obj(e=>2, s=>3, r=>2, s*r=>15) 
-    B = Obj(e=>2, s=>4, r=>3, s*r=>2)
+    A = Obj(e=>2, s=>3, r=>2, s*r=>2) 
+    B = Obj(e=>2, s=>2, r=>1, s*r=>2)
     C = Obj(e=>2, s=>3, r=>2, s*r=>2)
-    D = Obj(e=>2, s=>4, r=>3, s*r*r=>15)
+    D = Obj(e=>2, s=>2, r=>2, s*r*r=>1)
     T = random_mor(Float64, (A, B, C, D))
 
     @show T[e,e,e,e] # 2×2×2×2 Array{Float64,4}
-    @show T[1] # 2e ⊕ 2r ⊕ 3s ⊕ 15sr
-    @show T[2] # 2e ⊕ 3r ⊕ 4s ⊕ 2sr
-    @show T[2:3] # (2e ⊕ 3r ⊕ 4s ⊕ 2sr, 2e ⊕ 2r ⊕ 3s ⊕ 2sr)
-    @show T[end] # 2e ⊕ 3r ⊕ 4s ⊕ 15sr²
+    @show T[1] # 2e ⊕ 2r ⊕ 3s ⊕ 2sr
+    @show T[2] # 2e ⊕ r ⊕ 2s ⊕ 2sr
+    @show T[2:3] # (2e ⊕ r ⊕ 2s ⊕ 2sr, 2e ⊕ 2r ⊕ 3s ⊕ 2sr)
+    @show T[end] # 2e ⊕ 2r ⊕ 2s ⊕ sr²
     @show lastindex(T) # 4
     @show get_sector_size(T, (e,e,e,e)) # (2, 2, 2, 2)
-    @show size = get_sector_size(T, (e,s,s,e)) # (2, 4, 3, 2)
+    @show size = get_sector_size(T, (e,s,s,e)) # (2, 2, 3, 2)
     # @show get_sector_size(T, (e,s,r,e)) ERROR: ArgumentError: The sector (e, s, r, e) is not consistent
     S = Sector(e, s, s, e)
     @show T[S] = rand(size...) # The data is too long to show. Random data is generated and assigned to the sector (e, s, s, e)
@@ -238,11 +251,96 @@ function test_accend()
     @show is_descend((3,2,1), 4) 
     @show is_descend((2,1,4), 4)
     @show is_descend((4,3,2), 4)
+
+    @show is_cyclic((4,1,2,3), 4) # true
+    @show is_cyclic((4,1,2,4), 4) # false
+    @show is_cyclic((4,1,2,3,4), 4) # false
+
+    @show to_perm((1,2), 4)
+    @show to_perm((1,2,3), 4)
+    @show to_perm((1,2,3,4), 4)
+    @show to_perm((4,1), 4)
+    @show to_perm((4,1,2), 4)
+    @show to_perm((4,1,2,3), 4)
+    @show to_perm((3,4,1), 4)
+    # @show to_perm((4,1,2,3,4), 4) # ERROR: ArgumentError: The length of the tuple (4, 1, 2, 3, 4) is greater than 4
+    # @show to_perm((1,2,4,1), 4) # ERROR: ArgumentError: The (1, 2, 4, 1) is not in an accending order
+end
+
+function test_permute()
+    Z3 = CyclicGroup(3)
+    e = identity_element(Z3)
+    a = GroupElement(1, Z3)
+    b = GroupElement(2, Z3)
+    S = Sector(a, e, b)
+    @show VecG_permutesectors(S, (1,2,3)) # a ⊗ e ⊗ a²
+    @show VecG_permutesectors(S, (2,3,1)) # e ⊗ a² ⊗ a
+    @show VecG_permutesectors(S, (3,1,2)) # a² ⊗ a ⊗ e
+
+    D6 = DihedralGroup(3)
+    e = identity_element(D6)
+    s = GroupElement((1,0), D6)
+    r = GroupElement((0,1), D6)
+    S = Sector(e, s, r, s*r)
+    @show VecG_permutesectors(S, (1,2,3,4)) # e ⊗ s ⊗ r ⊗ sr
+    @show VecG_permutesectors(S, (2,3,4,1)) # s ⊗ r ⊗ sr ⊗ e
+    @show VecG_permutesectors(S, (3,4,1,2)) # r ⊗ sr ⊗ e ⊗ s
+
+    A = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    B = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    C = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    D = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    T = random_mor(Float64, (A, B, C, D))
+    Tperm = VecG_permutedims(T, (2,3,4,1)) 
+    @show Tperm[e,s,r,s*r] == permutedims(T[s*r, e, s, r],(2,3,4,1)) # true
+
+    Z2 = CyclicGroup(2)
+    e = identity_element(Z2)
+    a = GroupElement(1, Z2)
+    B = Obj(e=>2, a=>2)
+    C = Obj(e=>2, a=>2)
+    @show T = random_mor(Float64, (B,C))
+    @show Tperm = VecG_permutedims(T, (2,1))
+end
+
+function test_add()
+    G = CyclicGroup(3)
+    e = GroupElement(0, G)
+    a = GroupElement(1, G)
+    aa = GroupElement(2, G)
+    A = Obj(e=>1, a=>2, aa=>3)
+    B = Obj(e=>2, a=>3, aa=>2)
+    C = Obj(e=>1, a=>2, aa=>3)
+    D = Obj(e=>2, a=>3, aa=>2)
+    T1 = random_mor(Float64, (A, B, C, D))
+    T2 = random_mor(Float64, (A, B, C, D))
+    Tadd = T1 + T2
+    @show Tadd[e,e,e,e] == T1[e,e,e,e] + T2[e,e,e,e] # true
+    @show Tadd[e,a,a,a] == T1[e,a,a,a] + T2[e,a,a,a] # true
+    @show Tadd[a,a,e,a] == T1[a,a,e,a] + T2[a,a,e,a] # true
+
+    Tminus = T1 - T2
+    @show Tminus[e,e,e,e] == T1[e,e,e,e] - T2[e,e,e,e] # true
+    @show Tminus[e,a,a,a] == T1[e,a,a,a] - T2[e,a,a,a] # true
+    @show Tminus[a,a,e,a] == T1[a,a,e,a] - T2[a,a,e,a] # true
+
+    Tdiv = T1 ./ 2
+    @show Tdiv[e,e,e,e] == T1[e,e,e,e] ./ 2 # true
+    @show Tdiv[e,a,a,a] == T1[e,a,a,a] ./ 2 # true
+    @show Tdiv[a,a,e,a] == T1[a,a,e,a] ./ 2 # true
+
+    Tsqrt = sqrt.(T1)
+    @show Tsqrt[e,e,e,e] == sqrt.(T1[e,e,e,e]) # true
+    
 end
 # test_group()
 # test_obj()
 # test_sector()
-test_Mor()
+# test_Mor()
 # test_Mor_Z2()
+# test_Mor_D6()
 # test_get_indices()
 # test_accend()
+# test_permute()
+
+test_add()

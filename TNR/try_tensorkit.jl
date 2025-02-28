@@ -10,8 +10,10 @@ Base.conj(g::VecD8) = VecD8(mod(-g.s,2), mod((-1)^(g.s + 1) * g.r,4))
 dim(g::VecD8) = 1
 Base.isreal(::Type{VecD8}) = true
 TensorKit.FusionStyle(::Type{VecD8}) = UniqueFusion()
+TensorKit.BraidingStyle(::Type{VecD8}) = Bosonic()
 TensorKit.Nsymbol(a::VecD8, b::VecD8, c::VecD8) = (mod(a.s + b.s, 2), mod((-1)^b.s * a.r + b.r, 4)) == (c.s, c.r) ? 1 : 0
 ⊗(a::VecD8, b::VecD8) = VecD8(mod(a.s + b.s, 2), mod((-1)^b.s * a.r + b.r, 4))
+Base.isless(a::VecD8, b::VecD8) = a.s < b.s || (a.s == b.s && a.r < b.r)
 function Base.iterate(::TensorKit.SectorValues{VecD8},s=0,r=0)
     if s==0 && r < 4
         return (VecD8(s,r), (s, r+1))
@@ -40,11 +42,10 @@ function ⊗(V1::GradedSpace{VecD8, NTuple{8, Int64}}, V2::GradedSpace{VecD8, NT
         g = D8[i] ⊗ D8[j]
         multiplicity[TensorKit.findindex(D8, g)] += delta
     end
-    @show multiplicity
     return GradedSpace{VecD8, NTuple{8, Int64}}(Tuple(multiplicity), false)
 end
 
-# A = rand(V1 ⊗ V4 ← V2 ⊗ V3)
+A = rand(V1 ⊗ V4 ← V2 ⊗ V3)
 VecD8(1,2) ⊗ VecD8(0,0)
 GradedSpace{VecD8, NTuple{8, Int64}}((1, 0, 0, 0, 0, 0, 0, 0), false)
 

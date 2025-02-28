@@ -196,12 +196,14 @@ julia> G = CyclicGroup(3)
 function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
     iter = Iterators.product(map(x->keys(x.sumd), objects)...)
-    group = get_group(mor)
-    e = identity_element(group)
-    iter = group_tree(e, length(objects))
+
     for grouptuple in iter
-        size = get_sector_size(mor, grouptuple)
-        mor[grouptuple...] = rand(element_type, size...)
+        if multiply(grouptuple) == identity_element(get_group(mor))
+            size = get_sector_size(mor, grouptuple)
+            mor[grouptuple...] = rand(element_type, size...)
+        else
+            continue
+        end
     end
     return mor
 end
@@ -234,11 +236,14 @@ julia> G = CyclicGroup(3)
 function zero_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
     group = get_group(mor)
-    e = identity_element(group)
-    iter = group_tree(e, length(objects))
+    iter = Iterators.product(map(x->keys(x.sumd), objects)...)
     for grouptuple in iter
-        size = get_sector_size(mor, grouptuple)
-        mor[grouptuple...] = zeros(element_type, size...)
+        if multiply(grouptuple) == identity_element(group)
+            size = get_sector_size(mor, grouptuple)
+            mor[grouptuple...] = zeros(element_type, size...)
+        else
+            continue
+        end
     end
     return mor
 end
@@ -268,11 +273,15 @@ function identity_mor(element_type::Type, object::Obj)
     dual = dual_obj(object)
     group = get_group(object)
     delta = Mor(element_type, (object, dual))
-    for g in elements(group)
-        sect = get_sector_size(delta, (g, inverse(g)))
-        delta[g, inverse(g)] = Matrix{element_type}(I, sect...)
+    iter = Iterators.product(map(x->keys(x.sumd), (object,dual))...)
+    for keys in iter
+        if multiply(keys) == identity_element(group)
+            size = get_sector_size(delta, keys)
+            delta[keys...] = Matrix{element_type}(I, size...)
+        else
+            continue
+        end
     end
-
     return delta
 end
 
@@ -710,6 +719,27 @@ function is_descend(tup::Tuple{Vararg{Int}}, modn::Int)
     return test
 end
 
+"""
+Judge whether a tuple is cyclic.
+
+# Input:
+- a tuple of integers
+- a modulus
+
+# Output:
+- a boolean value, indicating whether the tuple is cyclic
+It reports false if the tuple is not cyclic or the elements are not in the range of 1 to modn.
+
+# Example
+
+```
+julia> is_cyclic((1,2,3,4), 4)
+       true
+
+julia> is_cyclic((4,1), 4)
+         false
+```
+"""
 function is_cyclic(tup::Tuple{Vararg{Int}}, modn::Int)
     test = is_accend(tup, modn)
     if tup[1]!=(mod(tup[end], modn) + 1)
@@ -718,15 +748,59 @@ function is_cyclic(tup::Tuple{Vararg{Int}}, modn::Int)
     return test
 end
 
+"""
+Convert a tuple to a permutation.
+
+# Input:
+- a tuple of integers (i,j,k,...)
+- a modulus n
+
+# Output:
+- a tuple of integers, which is a permutation of the input tuple (i,j,k,..., 1,2,..., i-1)
+
+# Example
+
+```
+julia> to_perm((1,2,3), 4)
+       (1, 2, 3, 4)
+
+julia> to_perm((3,4,1), 4)
+       (3, 4, 1, 2)
+```
+"""
 function to_perm(tup::Tuple{Vararg{Int}}, modn::Int)
     if !is_accend(tup, modn)
-        throw(Argumenterror("The $tup is not in an accending order"))
+        throw(ArgumentError("The $tup is not in an accending order"))
+    elseif length(tup) > modn
+        throw(ArgumentError("The length of the tuple $tup is greater than $modn"))
     end
     newtup = tup[1]:tup[1]+modn-1
     mod_newtup = Tuple(map(x->mod(x-1,modn)+1, newtup))
     return mod_newtup
 end
 
+"""
+Permute the sectors of a morphism.
+
+# Input:
+- a morphism
+- a tuple of integers, which is a permutation
+
+# Output:
+- a morphism, whose sectors are permuted
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       S = Sector(e, a, aa)
+       VecG_permutesectors(S, (2,3,1))
+        a ⊗ a² ⊗ e
+```
+"""
 function VecG_permutesectors(sect::Sector, perm::Tuple{Vararg{Int}})
     modn = length(sect.sect)
     if is_cyclic(perm, modn) == false
@@ -739,6 +813,33 @@ function VecG_permutesectors(sect::Sector, perm::Tuple{Vararg{Int}})
     return Sector(perm_sect_tup...)
 end
 
+"""
+Permute the dimensions of a morphism.
+
+# Input:
+- a morphism
+- a tuple of integers, which is a permutation
+
+# Output:
+- a morphism, whose dimensions are permuted
+
+# Example
+
+```
+julia> D6 = DihedralGroup(3)
+    e = identity_element(D6)
+    s = GroupElement((1,0), D6)
+    r = GroupElement((0,1), D6)
+    A = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    B = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    C = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    D = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    T = random_mor(Float64, (A, B, C, D))
+    Tperm = VecG_permutedims(T, (2,3,4,1)) 
+    Tperm[e,s,r,s*r] == permutedims(T[s*r, e, s, r],(2,3,4,1))
+    true
+```
+"""
 function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<:Group}
     modn = length(mor.objects)
     if is_cyclic(perm, modn) == false
@@ -757,6 +858,31 @@ function VecG_permutedims(mor::Mor{G, T}, perm::Tuple{Vararg{Int}}) where {T, G<
     return perm_mor
 end
 
+"""
+Elementwise addition of two morphisms.
+
+# Input:
+- two morphisms
+
+# Output:
+- the sum of the two morphisms
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T1 = random_mor(Float64, (A, B, C, D))
+       T2 = random_mor(Float64, (A, B, C, D))
+       T1 + T2
+```
+"""
 function Base.:+(mora::Mor{G, T}, morb::Mor{G, T}) where {T, G<:Group}
     if length(mora.objects)!=length(morb.objects)
         throw(ArgumentError("The first tensor has $(length(mora.objects)) number of legs, while the second tensor has $(length(morb.objects)) number of legs"))
@@ -777,6 +903,32 @@ function Base.:+(mora::Mor{G, T}, morb::Mor{G, T}) where {T, G<:Group}
     return moradd
 end
 
+"""
+Elementwise subtraction of two morphisms.
+
+# Input:
+- two morphisms
+
+# Output:
+- the difference of the two morphisms
+
+# Example
+
+```
+
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T1 = random_mor(Float64, (A, B, C, D))
+       T2 = random_mor(Float64, (A, B, C, D))
+       T1 - T2
+```
+"""
 function Base.:-(mora::Mor{G, T}, morb::Mor{G, T}) where {T, G<:Group}
     if length(mora.objects)!=length(morb.objects)
         throw(ArgumentError("The first tensor has $(length(mora.objects)) number of legs, while the second tensor has $(length(morb.objects)) number of legs"))
@@ -797,21 +949,29 @@ function Base.:-(mora::Mor{G, T}, morb::Mor{G, T}) where {T, G<:Group}
     return morsubt
 end
 
-function Base.broadcasted(::typeof(/), mor::Mor, x::Number)
-    for key in keys(mor.data)
-        mor[key] = mor[key] ./ x
-    end
-    return mor
-end
+"""
+Elementwise division of a morphism by a number.
 
-function Base.broadcasted(::typeof(/), x::Number, mor::Mor{G, T}) where {T, G<:Group}
+# Input:
+
+- a morphism
+- a number
+
+# Output:
+- a new morphism created by performing division
+"""
+function Base.broadcasted(::typeof(/), mor::Mor{G, T}, x::Number)  where {T, G<:Group}
     newmor = Mor(T, mor.objects)
     for key in keys(mor.data)
-        newmor[key] = diagm(x ./ diag(mor[key]))
+        newmor[key] = mor[key] ./ x
     end
     return newmor
 end
 
+
+"""
+
+"""
 function Base.broadcasted(::typeof(sqrt), mor::Mor{G, T}) where {T, G<:Group}
     newmor = Mor(T, mor.objects)
     for key in keys(mor.data)
