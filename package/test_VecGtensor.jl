@@ -58,6 +58,9 @@ function test_group()
     @show ee = x[1] # (e, e)
     @show iter = collect(group_tree(ee, 2))
     @show collect(group_tree(eee, 2))
+
+    @show Z = IntegerGroup() # ℤ
+    @show GroupElement(3, Z) # 𝟙³
 end
 
 function test_obj()
@@ -65,11 +68,55 @@ function test_obj()
     e = identity_element(D6)
     s = GroupElement((1,0), D6)
     r = GroupElement((0,1), D6)
-    @show A = Obj(e=>2, s=>3, r=>2, s*r=>15) # 2e ⊕ 3s ⊕ 2r ⊕ 15sr
-    @show zero_obj(D6) # nothing
-    @show dual_obj(A) # 2e ⊕ 2r² ⊕ 3s ⊕ 15sr
+    @show A = Obj(e=>2, s=>3, r=>2, s*r=>15) # 2r ⊕ 15sr ⊕ 3s ⊕ 2e
+    @show zero_obj(D6) # 0e
+    @show dual_obj(A) # 3s ⊕ 2r² ⊕ 2e ⊕ 15sr
     @show A == dual_obj(dual_obj(A)) # true
 
+    Z = IntegerGroup()
+    zero = identity_element(Z)
+    one = GroupElement(1, Z)
+    @show one * one
+    @show inverse(one)
+    @show zero * one == one # true
+    @show zero * zero == zero # true
+    @show B = Obj(zero=>2, one=>3) # 2𝟙⁰ ⊕ 3𝟙¹
+    @show dual_obj(B) # 2𝟙⁰ ⊕ 3𝟙⁻¹
+    @show B == dual_obj(dual_obj(B)) # true
+    @show zero_obj(Z) # 0𝟙⁰
+
+    Z2 = CyclicGroup(2)
+    e = identity_element(Z2)
+    a = GroupElement(1, Z2)
+    @show C = Obj(e=>2, a=>3) # 2e ⊕ 3a
+    @show zero_obj(Z2) # 0e
+    Z2Z2 = ProductGroup(Z2, Z2)
+    ee = identity_element(Z2Z2)
+    ea = GroupElement((e, a), Z2Z2)
+    ae = GroupElement((a, e), Z2Z2)
+    aa = GroupElement((a, a), Z2Z2)
+    @show D = Obj(ee=>2, ea=>3, ae=>4, aa=>5) # 3(e, a) ⊕ 2(e, e) ⊕ 5(a, a) ⊕ 4(a, e)
+    @show zero_obj(Z2Z2) # 0(e, e)
+    @show dual_obj(D) # 3(e, a) ⊕ 4(a, e) ⊕ 5(a, a) ⊕ 2(e, e)
+
+    Z3 = CyclicGroup(3)
+    e = identity_element(Z3)
+    a = GroupElement(1, Z3)
+    b = GroupElement(2, Z3)
+    @show E = Obj(e=>2, a=>3, b=>4) # 2e ⊕ 3a ⊕ 4a²
+    @show zero_obj(Z3) # 0e
+    @show dual_obj(E) # 3a² ⊕ 4a ⊕ 2e
+    @show E == dual_obj(dual_obj(E)) # true
+
+    Z2Z = ProductGroup(Z2, Z)
+    e = identity_element(Z2Z)
+    a = GroupElement(1, Z2)
+    one = GroupElement(1, Z)
+    @show a1 = GroupElement((a, one), Z2Z) # (a, 𝟙¹)
+    @show a1 * a1 # (e, 𝟙²)
+    @show inverse(a1) # (a, 𝟙⁻¹)
+    @show zero_obj(Z2Z) # (e, 𝟙⁰)
+    @show F = Obj(e=>2, a1=>3) # 2(e, 𝟙⁰) ⊕ 3(a, 𝟙¹)
 end
 
 function test_sector()
@@ -83,6 +130,37 @@ function test_sector()
     @show sect[2]
     @show sect[3]
     @show sect[4]
+
+    Z2 = CyclicGroup(2)
+    e = identity_element(Z2)
+    a = GroupElement(1, Z2)
+    @show sect = Sector(a, a)
+    @show sect[1]
+    @show sect[2]
+
+    Z2Z2 = ProductGroup(Z2, Z2)
+    ee = identity_element(Z2Z2)
+    ea = GroupElement((e, a), Z2Z2)
+    ae = GroupElement((a, e), Z2Z2)
+    aa = GroupElement((a, a), Z2Z2)
+    @show sect = Sector(ee, ea, ae, aa)
+    @show sect[1]
+    @show sect[2]
+
+    Z3 = CyclicGroup(3)
+    e = identity_element(Z3)
+    a = GroupElement(1, Z3)
+    b = GroupElement(2, Z3)
+    @show sect = Sector(a, e, b) # a ⊗ e ⊗ a²
+
+    Z = IntegerGroup()
+    Z2Z = ProductGroup(Z2, Z)
+    e = identity_element(Z2Z)
+    a = GroupElement(1, Z2)
+    one = GroupElement(1, Z)
+    a1 = GroupElement((a, one), Z2Z)
+    @show sect = Sector(e, a1, inverse(a1)) # (e, 𝟙⁰) ⊗ (a, 𝟙¹) ⊗ (a, 𝟙⁻¹)
+
 end
 
 function test_Mor()
@@ -161,10 +239,10 @@ function test_accend()
     @show is_descend((2,1,4), 4)
     @show is_descend((4,3,2), 4)
 end
-test_group()
+# test_group()
 # test_obj()
 # test_sector()
-# test_Mor()
+test_Mor()
 # test_Mor_Z2()
 # test_get_indices()
 # test_accend()

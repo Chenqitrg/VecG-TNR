@@ -9,6 +9,8 @@ function Base.show(io::IO, G::Group)
         print(io, "𝔻", subscript(2 * G.n))
     elseif G isa ProductGroup
         print(io, join(G.groups, " × "))
+    elseif G isa IntegerGroup
+        print(io, "ℤ")
     end
 end
 
@@ -74,10 +76,28 @@ function Base.show(io::IO, x::GroupElement{DihedralGroup})
         print(io, "sr", superscript(r))
     end
 end
-
 function Base.show(io::IO, x::GroupElement{ProductGroup})
     print(io, "(", join(x.value, ", "), ")")
-    
+end
+
+"""
+Display a group element in an IntegerGroup as 𝟙ⁿ
+
+# Arguments
+- `io::IO`: The output stream
+- `x::GroupElement{IntegerGroup}`: The group element to display
+
+# Example
+
+```
+julia> Z = IntegerGroup()
+        x = GroupElement(3, Z)
+        @show x
+        𝟙³
+```
+"""
+function Base.show(io::IO, x::GroupElement{IntegerGroup})
+    print(io, "𝟙", superscript(x.value))
 end
 
 function subscript(n::Integer)
@@ -116,29 +136,24 @@ end
 function superscript(n::Integer)
     # 定义一个映射，将字符 '0'-'9' 转换为 Unicode 下角标字符
     subs = Dict('0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
-                '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹')
+                '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹', '-' => '⁻')
     # 将数字 n 转换为字符串，逐位映射到下角标字符，并连接成新的字符串
     return join([subs[c] for c in string(n)])
 end
 
 # Custom display for Object
 function Base.show(io::IO, x::Obj)
-    group = get_group(x)
-    sumd = x.sumd
-    el = elements(group)
     op = false
-    for i in el
-        if sumd[i] != 0
-            if op == true
-                print(io, " ⊕ ")
-            end
-            if sumd[i] == 1
-                print(io, i)
-            else
-                print(io, sumd[i], i)
-            end
-            op = true
+    for i in keys(x.sumd)
+        if op == true
+            print(io, " ⊕ ")
         end
+        if x[i] == 1
+            print(io, i)
+        else
+            print(io, x[i], i)
+        end
+        op = true
     end
 end
 

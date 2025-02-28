@@ -7,7 +7,9 @@ end
 
 
 """
-Structure of objects in VecG
+Structure of objects in VecG. To be used in Mor.
+
+To adapt to infinite groups, we use a dictionary to store the multiplicities of group elements. Moreover, some group elements may not appear in the object.
 
 # Input: 
 - pairs of the form g=>n
@@ -32,16 +34,12 @@ struct Obj{G<:Group}
     sumd::Dict{GroupElement{G}, Int}  # 直接使用 GroupElement 的子类型作为键的类型
 end
 function Obj(pairs::Pair{GroupElement{G}, Int}...) where G <: Group
-    g0 = first(pairs).first
-    group = g0.group
     sumd = Dict{GroupElement{G}, Int}()
     for pair in pairs
-        sumd[pair.first] = pair.second
-    end
-    el = elements(group)
-    for g in el
-        if !haskey(sumd, g)
-            sumd[g] = 0
+        if pair.second == 0
+            continue
+        else
+            sumd[pair.first] = pair.second
         end
     end
     return Obj(sumd)
@@ -65,10 +63,8 @@ julia> G = CyclicGroup(3)
 """
 function zero_obj(group::G) where G<:Group
     sumd = Dict{GroupElement{G}, Int}()
-    el = elements(group)
-    for g in el
-        sumd[g] = 0
-    end
+    el = identity_element(group)
+    sumd[el] = 0
     return Obj(sumd)
 end
 
@@ -99,7 +95,7 @@ function dual_obj(obj::Obj{G}) where G<:Group
     dualobj = Dict{GroupElement{G}, Int}()
     dict = obj.sumd
     for g in keys(dict)
-        dualobj[g] = dict[inverse(g)]
+        dualobj[inverse(g)] = dict[g]
     end
     return Obj(dualobj)
 end
@@ -199,6 +195,7 @@ julia> G = CyclicGroup(3)
 """
 function random_mor(element_type::Type, objects::Tuple{Vararg{Obj}})
     mor = Mor(element_type, objects)
+    iter = Iterators.product(map(x->keys(x.sumd), objects)...)
     group = get_group(mor)
     e = identity_element(group)
     iter = group_tree(e, length(objects))

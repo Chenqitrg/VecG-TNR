@@ -39,6 +39,9 @@ struct DihedralGroup <: Group{Tuple{Int,Int}}
     n::Int
 end
 
+struct IntegerGroup <: Group{Int}
+end
+
 """
 ProductGroup(groups...)
 
@@ -66,6 +69,7 @@ Get the element type of the group.
 Base.eltype(::Type{<:CyclicGroup}) = Int
 Base.eltype(::Type{<:DihedralGroup}) = Tuple{Int,Int}
 Base.eltype(::Type{<:ProductGroup}) = Tuple{Vararg{Group}}
+Base.eltype(::Type{<:IntegerGroup}) = Int
 
 """
 Definition of the structure GroupElement
@@ -105,6 +109,8 @@ GroupElement{DihedralGroup}((2,1), DihedralGroup(4))
 julia> GroupElement((GroupElement(2, CyclicGroup(4), GroupElement((2,1), DihedralGroup(4)))), ProductGroup(CyclicGroup(4), DihedralGroup(4)))
 GroupElement{ProductGroup}((GroupElement{CyclicGroup}(2, CyclicGroup(4)), GroupElement{DihedralGroup}((2,1), DihedralGroup(4))), ProductGroup((CyclicGroup(4), DihedralGroup(4)))
 
+julia> GroupElement(4, IntegerGroup())
+GroupElement{IntegerGroup}(4, IntegerGroup())
 ```
 
 """
@@ -115,7 +121,7 @@ function GroupElement(value::Tuple, group::DihedralGroup)
     s, r = value
     return GroupElement{DihedralGroup}((mod(s, 2), mod(r, group.n)), group)
 end
-function GroupElement(values, group::ProductGroup)
+function GroupElement(values::Tuple{GroupElement}, group::ProductGroup)
     for (value, g) in zip(values, group.groups)
         if !(value isa GroupElement)
             error("Each element in the tuple must be a GroupElement")
@@ -126,6 +132,10 @@ function GroupElement(values, group::ProductGroup)
     end
     return GroupElement{ProductGroup}(values, group) 
 end
+function GroupElement(values::Int, group::IntegerGroup)
+    return GroupElement{IntegerGroup}(values, group)
+end
+
 
 
 # ===========================================
@@ -133,7 +143,8 @@ end
 # ===========================================
 
 """
-Generating the tuple of elements of group.
+Generating the tuple of elements of group. Support CyclicGroup, DihedralGroup and ProductGroup.
+However, for integer group, the elements are infinite, so we do not provide this function.
 
 # Example
 ```
@@ -170,10 +181,15 @@ Give the identity element of the group
 ```
 julia> identity_element(CyclicGroup(3))
 GroupElement{CyclicGroup}(0, CyclicGroup(3))
+
 julia> identity_element(DihedralGroup(3))
 GroupElement{DihedralGroup}((0,0),DihedralGroup(3))
+
 julia> identity_element(ProductGroup(CyclicGroup(3), DihedralGroup(3)))
 GroupElement{ProductGroup}((GroupElement{CyclicGroup}(0, CyclicGroup(3)), GroupElement{DihedralGroup}((0,0), DihedralGroup(3))), ProductGroup((CyclicGroup(3), DihedralGroup(3)))
+
+julia> identity_element(IntegerGroup())
+GroupElement{IntegerGroup}(0, IntegerGroup())
 ```
 
 """
@@ -185,6 +201,9 @@ function identity_element(group::DihedralGroup)
 end
 function identity_element(group::ProductGroup)
     return GroupElement((identity_element(g) for g in group.groups), group) 
+end
+function identity_element(group::IntegerGroup)
+    return GroupElement(0, group)
 end
 
 """
@@ -200,6 +219,9 @@ GroupElement{DihedralGroup}((0,1), DihedralGroup(3))
 
 julia> inverse(GroupElement((GroupElement(1, CyclicGroup(3)), GroupElement((0,2), DihedralGroup(3))), ProductGroup(CyclicGroup(3), DihedralGroup(3)))
 GroupElement{ProductGroup}((GroupElement{CyclicGroup}(2, CyclicGroup(3)), GroupElement{DihedralGroup}((0,1), DihedralGroup(3))), ProductGroup((CyclicGroup(3), DihedralGroup(3)))
+
+julia> inverse(GroupElement(1, IntegerGroup()))
+GroupElement{IntegerGroup}(-1, IntegerGroup())
 ```
 """
 function inverse(x::GroupElement{CyclicGroup})
@@ -211,6 +233,9 @@ function inverse(x::GroupElement{DihedralGroup})
 end
 function inverse(x::GroupElement{ProductGroup})
     return GroupElement(inverse.(x.value), x.group)
+end
+function inverse(x::GroupElement{IntegerGroup})
+    return GroupElement(-x.value, x.group)
 end
 
 """
@@ -287,6 +312,22 @@ function group_multiply(x::GroupElement{ProductGroup}, y::GroupElement{ProductGr
 end
 
 """
+group_multiply(x::GroupElement{IntegerGroup}, y::GroupElement{IntegerGroup})
+
+Multiplying two group elements of integer group.
+
+# Example
+
+```
+julia> group_multiply(GroupElement(2, IntegerGroup()), GroupElement(3, IntegerGroup()))
+GroupElement{IntegerGroup}(5, IntegerGroup())
+```
+"""
+function group_multiply(x::GroupElement{IntegerGroup}, y::GroupElement{IntegerGroup})
+    return GroupElement(x.value + y.value, x.group)
+end
+
+"""
 Multiplying a tuple of group elements.
 
 # Example
@@ -314,10 +355,22 @@ end
 Overload the == to group case.
 """
 function Base.:(==)(x::GroupElement{CyclicGroup}, y::GroupElement{CyclicGroup})
-    return x.value == y.value
+    bool = true
+    if x.value != y.value
+        bool = false
+    elseif x.group != y.group
+        bool = false
+    end
+    return bool
 end
 function Base.:(==)(x::GroupElement{DihedralGroup}, y::GroupElement{DihedralGroup})
-    return x.value == y.value
+    bool = true
+    if x.value != y.value
+        bool = false
+    elseif x.group != y.group
+        bool = false
+    end
+    return bool
 end
 function Base.:(==)(x::GroupElement{ProductGroup}, y::GroupElement{ProductGroup})
     bool = true
@@ -328,11 +381,15 @@ function Base.:(==)(x::GroupElement{ProductGroup}, y::GroupElement{ProductGroup}
     end
     return bool
 end
+function Base.:(==)(x::GroupElement{IntegerGroup}, y::GroupElement{IntegerGroup})
+    return x.value == y.value
+end
+
 
 """
-```group_tree(g, n)```
 
-Generating an iterator of n-tuple of group elements, such that all elements are multiplied to g.
+Generating an iterator of n-tuple of group elements, such that all elements are multiplied to g. It supports CyclicGroup, DihedralGroup and ProductGroup.
+However, since the elements of IntegerGroup are infinite, we do not provide this function.
 
 # Input Parameter:
 
@@ -368,7 +425,8 @@ function group_tree(g::GroupElement, n::Int)
 end
 
 """
-Generating a iterator, whose terms are n-tuple of group elements.
+Generating a iterator, whose terms are n-tuple of group elements. It supports CyclicGroup, DihedralGroup and ProductGroup.
+However, since the elements of IntegerGroup are infinite, we do not provide this function.
 
 # Example
 
