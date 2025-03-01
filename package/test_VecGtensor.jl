@@ -177,10 +177,10 @@ function test_Mor()
     @show T.objects # (2e ⊕ 2r ⊕ 3s ⊕ 15sr, 2e ⊕ 3r ⊕ 4s ⊕ 2sr, 2e ⊕ 2r ⊕ 3s ⊕ 2sr, 2e ⊕ 3r ⊕ 4s ⊕ 15sr²)
     # @show T[e,e,e,e] ERROR: KeyError: key e ⊗ e ⊗ e ⊗ e not found
     @show T[e,e,e,e] = rand(2,2,2,2)
-    # @show T[e,e,e,e] = rand(2,3,2,3) ERROR: ArgumentError: Data size (2, 3, 2, 3) does not match sector size (2, 2, 2, 2)
-    # @show T # The data is too long to show. The e ⊗ e ⊗ e ⊗ e sector is rand(2,2,2,2) given above
-    # @show T[e,s,s,e]  = rand(2,4,3,2)
-    # @show T # The data is too long to show. The e ⊗ s ⊗ s ⊗ e sector is rand(2,4,3,2) given above
+    @show T[e,e,e,e] = rand(2,3,2,3) ERROR: ArgumentError: Data size (2, 3, 2, 3) does not match sector size (2, 2, 2, 2)
+    @show T # The data is too long to show. The e ⊗ e ⊗ e ⊗ e sector is rand(2,2,2,2) given above
+    @show T[e,s,s,e]  = rand(2,4,3,2)
+    @show T # The data is too long to show. The e ⊗ s ⊗ s ⊗ e sector is rand(2,4,3,2) given above
     @show TT = random_mor(Float64, (A, B, C, D)) # The data is too long to show. Random morphism is generated   
     # @show TT = zero_mor(Float64, (A, B, C, D)) # The data is too long to show. Zero morphism is generated
     # @show Mat = identity_mor(Float64, A) # The data is too long to show. Identity morphism is generated

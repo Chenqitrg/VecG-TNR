@@ -3,9 +3,90 @@ This module implements decompositions for VecG-tensors.
 """
 
 """
-Extracts VecG morphism to block 
+Given a bridge group element g_bridge, find all sectors that fuses to g_bridge when splited to 1, ..., n_leg_split-1, n_leg_split, | n_leg_split+1, n_leg_split+2, ...
+
+Graphically, we consider the following:
+
+```julia
+|  |  |  |  |
+g1 g2...    g_n_leg_split
+|  |  |  |  |
+^  ^  ^  ^  ^
+|  |  |  |  |
+ \\  \\ | /  /
+      ^
+      |
+      g_bridge
+      |
+ /  / | \\  \\
+|  |  |  |  |
+gn gn-1...g_n_leg_split+1  
+|  |  |  |  |
+v  v  v  v  v
+|  |  |  |  |
+```
+
+# Input:
+- a KeySet
+- an integer that describes the number of splitted legs
+- a group element that describes the total sector of splitting
+
+# Output:
+- a tuple of group element tuples, describing the out sector
+- a tuple of group element tuples, describing the in sector
+
+# Example
+
+```
+    D6 = DihedralGroup(3)
+    e = identity_element(D6)
+    s = GroupElement((1,0), D6)
+    r = GroupElement((0,1), D6)
+    A = Obj(e=>2, s=>3, r=>2, s*r=>15) 
+    B = Obj(e=>2, s*r*r=>4, r=>3, s*r=>2)
+    C = Obj(e=>2, s=>3, r*r=>2, s*r=>2)
+    D = Obj(e=>2, s=>4, r=>3, s*r*r=>15)
+    TT = random_mor(Float64, (A, B, C, D))
+    @show to_sector_outin(keys(TT.data), 2, s)
+    (((s, e), (r, sr)), ((e, s), (s, e), (r², sr²)))
+```
 """
-function extract_blocks_to_matrix(mor::Mor{G, T}, n_leg_split::Int, g_bridge::GroupElement{G}) where {T, G <: Group} # legs split as 1, ..., n-1, n, |, n+1, n+2, ...
+function to_sector_outin(ks::Base.KeySet, n_leg_split::Int, g_bridge::GroupElement{G}) where {G <: Group}
+    out_sector = ()
+    in_sector = ()
+
+    for sector in ks
+        out_sect = sector.sect[1:n_leg_split]
+        in_sect = sector.sect[n_leg_split+1:end]
+        if multiply(out_sect) == g_bridge
+            if !(out_sect in out_sector)
+                out_sector = (out_sector..., out_sect)
+            end
+            if !(in_sect in in_sector)
+                in_sector = (in_sector..., in_sect)
+            end
+        end
+    end
+
+    return out_sector, in_sector
+end
+
+
+
+"""
+Extracts VecG morphism to block matrices when given a fixed group element g_bridge. This is an intermediate function before performing svd.
+
+# Input
+- A morphism
+- A integer, before and include which legs will be considered as row indices, and after which legs will be considered as column indices
+- A group element, representing the total sector to be split. Only the sectors such that rows are multiplied to that group element is taken out.
+
+# Output:
+- A matrix of matrices
+
+
+"""
+function extract_blocks_to_matrix(mor::Mor{G, T}, out_sector, in_sector) where {T, G <: Group} # legs split as 1, ..., n-1, n, |, n+1, n+2, ...
     n_leg = length(mor.objects)
     group = get_group(mor)
 
@@ -14,8 +95,9 @@ function extract_blocks_to_matrix(mor::Mor{G, T}, n_leg_split::Int, g_bridge::Gr
         error("Elements of legs must be in the range 1 to $n_leg")
     end
 
-    out_sectors = group_tree(g_bridge, n_leg_split)
-    in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
+   
+    # out_sectors = group_tree(g_bridge, n_leg_split)
+    # in_sectors = group_tree(inverse(g_bridge), n_leg - n_leg_split)
 
     A_blocks = Matrix{AbstractMatrix}(undef, length(out_sectors), length(in_sectors))
 
