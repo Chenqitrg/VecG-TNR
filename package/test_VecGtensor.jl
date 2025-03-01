@@ -333,6 +333,51 @@ function test_add()
     @show Tsqrt[e,e,e,e] == sqrt.(T1[e,e,e,e]) # true
     
 end
+
+function test_dag()
+    G = CyclicGroup(2)
+    e = GroupElement(0, G)
+    a = GroupElement(1, G)
+    A = Obj(e=>1, a=>2)
+    B = Obj(e=>2, a=>1)
+    T = random_mor(ComplexF64, (A, B))
+    @show Tdag = VecG_dag(T)
+    @show Tdag[e,e] == T[e,e]' # true
+    @show [1 + im 2 + 3im]' 
+    @show Tdag[a,a] == T[a,a]' # true
+    @show T[e,e] = reshape(Array{Complex{Float64}, 2}([1.0+2im 2+3.0im]), 1, 2)
+    T[a,a] = reshape(Array{Complex{Float64}, 2}([1.0+2im 2+3.0im]), 2, 1)
+    Tdag = VecG_dag(T)
+    @show Tdag[e,e]
+    @show Tdag[a,a]
+    @show Tdag[a,a] == T[a,a]' # true
+
+    G = CyclicGroup(3)
+    e = GroupElement(0, G)
+    a = GroupElement(1, G)
+    aa = GroupElement(2, G)
+    A = Obj(e=>1, a=>2, aa=>3)
+    B = Obj(e=>2, a=>4, aa=>2)
+    @show T = random_mor(ComplexF64, (A, B))
+    @show Tdag = VecG_dag(T)
+
+    G = DihedralGroup(3)
+    e = identity_element(G)
+    s = GroupElement((1,0), G)
+    r = GroupElement((0,1), G)
+    A = Obj(e=>1, s=>2, r=>3, s*r=>4)
+    B = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    C = Obj(e=>1, s=>2, r=>3, s*r=>4)
+    D = Obj(e=>2, s=>3, r=>2, s*r=>1)
+    @show T = random_mor(ComplexF64, (A, B, C, D))
+    @show T[e,s,r,s*r]
+    @show Tdag = VecG_dag(T)
+    @show keys(Tdag.data)
+    @show Tdag[e,e,e,e]
+    @show Tdag.objects
+    @show Tdag[e, e, s*r, s*r] == conj.(permutedims(T[s*r, s*r, e, e], (4,3,2,1))) # true
+
+end
 # test_group()
 # test_obj()
 # test_sector()
@@ -342,5 +387,5 @@ end
 # test_get_indices()
 # test_accend()
 # test_permute()
-
-test_add()
+# test_add()
+test_dag()

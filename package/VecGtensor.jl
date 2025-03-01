@@ -970,7 +970,29 @@ end
 
 
 """
+Take the elementwise square root of a morphism.
 
+# Input:
+- a morphism
+
+# Output:
+- a new morphism created by taking the elementwise square root
+
+# Example
+
+```
+
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = random_mor(Float64, (A, B, C, D))
+       sqrt(T)
+```
 """
 function Base.broadcasted(::typeof(sqrt), mor::Mor{G, T}) where {T, G<:Group}
     newmor = Mor(T, mor.objects)
@@ -993,19 +1015,73 @@ end
 #   v v v v v
 #   | | | | |
 #       T^†
+"""
+Take the dagger of a morphism.
+The dagger of a morphism is defined by taking the conjugate transpose of the tensor of each sector.
+The new legs are in the reverse order of the original legs.
+Moreover, the objects of the new morphism are the dual objects of the original morphism.
+For example:
+- The 1st leg becomes the last leg
+- The 2nd leg becomes the 2nd last leg
+- The 3rd leg becomes the 3rd last leg
+- ...
+
+Here is an picture to illustrate the idea:
+```
+| | | | |
+1 2 3 4 5
+| | | | |
+^ ^ ^ ^ ^
+| | | | |
+    T
+```
+After taking the dagger, the morphism becomes:
+```
+| | | | |
+5 4 3 2 1
+| | | | |
+v v v v v
+| | | | |
+    T^†
+```
+
+# Input:
+- a morphism
+
+# Output:
+- a new morphism created by taking the dagger
+
+# Example
+
+```
+julia> G = CyclicGroup(3)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       aa = GroupElement(2, G)
+       A = Obj(e=>1, a=>2, aa=>3)
+       B = Obj(e=>2, a=>3, aa=>2)
+       C = Obj(e=>1, a=>2, aa=>3)
+       D = Obj(e=>2, a=>3, aa=>2)
+       T = random_mor(Float64, (A, B, C, D))
+       dagger(T)
+```
+"""
 function VecG_dag(mor::Mor{G, T}) where {T, G<:Group}
-    group = get_group(mor)
     leg_number = length(mor.objects)
     obj = ()
     for i in 1:leg_number
-        obj = (dual_obj(mor[i]), obj...)
+        obj = (dual_obj(mor[i]), obj...) # The order of the objects is reversed, and the dual object is taken
     end
-    mor_dag = Mor(T, obj)
-    for key in group_tree(identity_element(group), leg_number)
-        # @show key
-        dag_key = reverse(inverse.(key))
-        mor_dag[key...] = permutedims(conj.(mor[dag_key...]), reverse(1:leg_number))
+    mor_dag = Mor(T, obj) # The objects are reversed
+    for key in keys(mor.data)
+        dag_key = inverse.(reverse(key.sect))
+        mor_dag[dag_key...] = permutedims(conj.(mor[key]), reverse(1:leg_number))
     end
+    # for key in group_tree(identity_element(group), leg_number)
+    #     # @show key
+    #     dag_key = reverse(inverse.(key))
+    #     mor_dag[key...] = permutedims(conj.(mor[dag_key...]), reverse(1:leg_number))
+    # end
     return mor_dag
 end
 

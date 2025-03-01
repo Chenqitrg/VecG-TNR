@@ -167,6 +167,7 @@ function Base.show(io::IO, S::Sector)
     end
 end
 
+
 """
 Display a morphism as a list of objects
 
@@ -184,10 +185,15 @@ T = Mor(Float64, (A, A, A))
 show(stdout, T)
 ```
 """
-function Base.show(io::IO, ::MIME"text/plain", T::Mor)
-    println(io, "Group: ", get_group(T))
+function Base.show(io::IO, T::Mor)
+    println(io, "Group: ", get_group(T), "\n")
     for (i, obj) in enumerate(T.objects)
-        println(io, "Leg $i is of object $obj")
+        println(io, "Leg $i is of object $obj \n")
+    end
+    for sect in keys(T.data)
+        println(io, "Sector: ", sect, "\n")
+        show(io, MIME("text/plain"), T[sect])
+        println(io, "\n")
     end
 end
 
