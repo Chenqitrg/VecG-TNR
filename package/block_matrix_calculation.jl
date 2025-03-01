@@ -1,3 +1,55 @@
+
+"""
+To perform the calculation with VecG-tensor, we need to reduce the formal calculation to the detailed matrix calculation. 
+This module provides functions for block matrix calculations, including block matrix SVD and QR decomposition.
+    It also provides functions for partial trace and outer product of tensors.
+        Our philosophy is to separate the formal part of the code from the numerical part.
+        The formal part is in the VecG_TNR module, and the numerical part is in the main module.
+        The formal part is for the formal definition of the tensor network renormalization, which is mostly the structure of the data.
+        And the numerical part is for the numerical implementation, which is mostly the calculation of the data.
+"""
+
+"""
+Concatenate a 2D array of matrices into a single large matrix, and record metadata for the submatrices.
+    The metadata is stored in a dictionary with keys (i, j), which represents the location of the block.
+    And values (start_row, start_col, num_rows, num_cols) represent the starting row and column of the block, and the number of rows and columns of the block.
+    The metadata can be used to extract the submatrices from the large matrix.
+
+# Arguments
+- `matrices::AbstractMatrix{<:AbstractMatrix}`: A 2D array of matrices to be concatenated.
+
+# Returns
+- `big_matrix::Matrix`: The large matrix obtained by concatenating the input matrices.
+- `metadata::Dict{Tuple{Int, Int}, Tuple{Int, Int, Int, Int}}`: The metadata for the submatrices.
+
+# Example
+```julia
+M = Matrix{Matrix}(undef, 2, 2)
+A = [1 2; 3 4]  # 2x2 matrix
+B = [5 6 6; 7 8 8]  # 2x3 matrix
+C = [9 10; 11 12; 15 16; 17 18]  # 3x2 matrix
+D = [13 14 19; 15 16 20; 21 22 23]  # 3x3 matrix
+M[1,1] = A
+M[1,2] = B
+M[2,1] = C
+M[2,2] = D
+big_matrix, metadata = concatenate_matrices_with_metadata(M)
+@show big_matrix
+6×5 Matrix{Int64}:
+  1   2   5   6   6
+  3   4   7   8   8
+  9  10  13  14  19
+ 11  12  15  16  20
+ 15  16  21  22  23
+ 17  18   0   0   0
+ @show metadata
+ Dict{Tuple{Int64, Int64}, NTuple{4, Int64}} with 4 entries:
+  (1, 2) => (1, 3, 2, 3)
+  (1, 1) => (1, 1, 2, 2)
+  (2, 2) => (3, 3, 3, 3)
+  (2, 1) => (3, 1, 4, 2)
+```
+"""
 function concatenate_matrices_with_metadata(matrices::AbstractMatrix{<:AbstractMatrix})
     # Number of submatrices in rows and columns
     rows::Int = size(matrices, 1)  # Number of submatrices in each row
@@ -40,7 +92,52 @@ function concatenate_matrices_with_metadata(matrices::AbstractMatrix{<:AbstractM
     return big_matrix, metadata
 end
 
+"""
+Perform SVD on a block matrix, where each block is a submatrix.
+    The input is a 2D array of matrices, and the output is a tuple of block matrices U, S, and V.
+    The block matrices U and V are the left and right singular vectors, respectively.
+    The block matrix S is the singular values, stored as a vector.
 
+# Arguments
+- `matrices::AbstractMatrix{<:AbstractMatrix}`: A 2D array of matrices to be factorized.
+
+# Returns
+- `U_blocks::Vector{AbstractMatrix}`: A vector of block matrices representing the left singular vectors.
+- `S::Vector`: A vector of singular values.
+- `V_blocks::Vector{AbstractMatrix}`: A vector of block matrices representing the right singular vectors.
+
+# Example
+```julia
+A = [1 2; 3 4]  # 2x3 matrix
+B = [5 6 6; 7 8 8]  # 2x3 matrix
+C = [9 10; 11 12; 15 16; 17 18]  # 4x2 matrix
+D = [13 14 19; 15 16 20; 21 22 23; 25 26 27]  # 4x3 matrix
+matrices = Array{Matrix{Float64}}(undef, 2, 2)
+matrices[1, 1] = A
+matrices[1, 2] = B
+matrices[2, 1] = C
+matrices[2, 2] = D
+U_blocks, S, V_blocks = block_matrix_svd(matrices)
+```
+
+The output U_blocks, S, and V_blocks can be compared with the output of the svd function. Here we can use the concatenate_matrices_with_metadata function to concatenate the block matrices into a single large matrix and compare the results.
+However, before doing so, we need to reshape the block matrices into a 2x1 array to match the input format of the concatenate_matrices_with_metadata function.
+The comparison should return true for both U and V.
+
+```julia
+Ucat, _ = concatenate_matrices_with_metadata(AbstractMatrix{AbstractMatrix}(reshape(U_blocks,2,1)))
+Vcat, _ = concatenate_matrices_with_metadata(AbstractMatrix{AbstractMatrix}(reshape(V_blocks,2,1)))
+U, s, V = svd([A B; C D])
+@show Ucat ≈ U
+@show Vcat ≈ V
+true
+true
+```
+
+Thus we would like to expect that the U_blocks * S * V_blocks' is approximately equal to the original matrix. The Hermitian conjugate need to be taken into account when dealing with complex matrices. 
+This choice of the convension if different from the ITensor package, where the Hermitian conjugate is taken into account in the SVD function.
+In VecG tensor svd, we will include the Hermitian conjugate in the SVD function, such that the contraction of U * S * V will directly give the original matrix.
+"""
 function block_matrix_svd(matrices::AbstractMatrix{<:AbstractMatrix})
     # Extract row sizes and column sizes for the block structure
     r_sizes = [size(matrices[i, 1], 1) for i in 1:size(matrices, 1)]  # Row sizes of each block row
@@ -68,6 +165,8 @@ function block_matrix_svd(matrices::AbstractMatrix{<:AbstractMatrix})
     end
     return U_blocks, S, V_blocks
 end
+
+
 
 function block_matrix_qr(matrices::AbstractMatrix{<:AbstractMatrix})
     # Extract row sizes and column sizes for the block structure

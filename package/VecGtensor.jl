@@ -1085,6 +1085,30 @@ function VecG_dag(mor::Mor{G, T}) where {T, G<:Group}
     return mor_dag
 end
 
+"""
+Find the maximum absolute value of the element in a morphism.
+
+# Input:
+- a morphism
+
+# Output:
+- the maximum absolute value of the element in the morphism
+
+# Example
+
+```
+julia> G = CyclicGroup(2)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       A = Obj(e=>1, a=>1)
+       B = Obj(e=>1, a=>1)
+         T = Mor(Float64, (A, B))
+         T[e,e] = reshape([1],1,1)
+            T[a,a] = reshape([2],1,1)
+       max_abs(T)
+         2.0
+```
+"""
 function max_abs(mor::Mor)
     max = 0.
     for key in keys(mor.data)

@@ -378,6 +378,27 @@ function test_dag()
     @show Tdag[e, e, s*r, s*r] == conj.(permutedims(T[s*r, s*r, e, e], (4,3,2,1))) # true
 
 end
+
+function test_maxabs()
+    G = CyclicGroup(2)
+       e = GroupElement(0, G)
+       a = GroupElement(1, G)
+       A = Obj(e=>1, a=>1)
+       B = Obj(e=>1, a=>1)
+         T = Mor(Float64, (A, B))
+         T[e,e] = Array{Float64, 2}(reshape([1],1,1)) # Explicit type conversion is needed. Otherwise, the type of the array will be an error
+            T[a,a] =Array{Float64, 2}(reshape([2],1,1))
+       @show max_abs(T) == 2.0 # true
+
+         G = CyclicGroup(3)
+         e = GroupElement(0, G)
+            a = GroupElement(1, G)
+            aa = GroupElement(2, G)
+            A = Obj(e=>1, a=>2, aa=>3)
+            B = Obj(e=>1, a=>2, aa=>3)
+            T = random_mor(Float64, (A, B))
+            @show max_abs(T)
+end
 # test_group()
 # test_obj()
 # test_sector()
@@ -388,4 +409,5 @@ end
 # test_accend()
 # test_permute()
 # test_add()
-test_dag()
+# test_dag()
+test_maxabs()
