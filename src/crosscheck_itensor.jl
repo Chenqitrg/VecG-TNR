@@ -3,38 +3,6 @@ using Revise
 includet("main.jl")
 using .VecG_TNR
 
-function check_Z2_svd()
-    q0 = QN(0,2)
-    q1 = QN(1,2)
-    i = Index(q0=>1, q1=>1)
-    j = Index(q0=>1, q1=>1)
-    k = Index(q0=>1, q1=>1)
-    l = Index(q0=>1, q1=>1)
-    T = randomITensor(i,j,k,l)
-
-    Z2(i::Int) = GroupElement(i-1, CyclicGroup(2))
-    e = Z2(1)
-    a = Z2(2)
-    I = Obj(e=>1, a=>1)
-    J = Obj(e=>1, a=>1)
-    K = Obj(e=>1, a=>1)
-    L = Obj(e=>1, a=>1)
-    mor = Mor(Float64, (I, J, K, L))
-
-    for x = 1 : 2, y = 1 : 2, z = 1 : 2
-        w = mod((x-1) + (y-1) + (z - 1) ,2) + 1
-        mor[Z2(x), Z2(y), Z2(z), Z2(w)] = reshape([T[i=>x, j=>y, k=>z, l=>w]], 1,1,1,1)
-    end
-
-    u, s, v = svd(T, (i, j))
-    U, S, V = VecG_svd(mor, 2)
-
-    # f2, k2 = factorize(T, (j, k); which_decomp = "svd", ortho = "none")
-    # perm_mor = VecG_permutedims(mor, (2,3,4,1))
-    # P2, Q2 = VecG_factorize(perm_mor, 2, 4, "svd")
-
-    return u, s, v, U, S, V
-end
 
 function check_Z2_qr()
     q0 = QN(0,2)

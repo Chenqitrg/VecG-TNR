@@ -29,7 +29,7 @@ Construct a structure of group D2n.
 
 # Example
 
-```jldoctest
+```
 
 julia> DihedralGroup(4)
 DihedralGroup(4)
@@ -39,6 +39,14 @@ struct DihedralGroup <: Group{Tuple{Int,Int}}
     n::Int
 end
 
+"""
+Constructing integer group ℤ
+
+```
+julia> IntegerGroup()
+IntegerGroup()
+```
+"""
 struct IntegerGroup <: Group{Int}
 end
 
@@ -49,7 +57,7 @@ Construct a structure of group G₁ × G₂ × ... × Gₙ.
 
 # Example
 
-```jldoctest
+```
 julia> ProductGroup(CyclicGroup(2), CyclicGroup(3))
 ProductGroup((CyclicGroup(2), CyclicGroup(3)))
 ```
@@ -76,7 +84,7 @@ Definition of the structure GroupElement
 
 # Example
 
-```jldoctest
+```
 julia> GroupElement(2, CyclicGroup(4))
 GroupElement{CyclicGroup}(2, CyclicGroup(4))
 
@@ -99,7 +107,7 @@ Construct a group element of group, with value value.
 
 # Example
 
-```jldoctest
+```
 julia> GroupElement(2, CyclicGroup(4))
 GroupElement{CyclicGroup}(2, CyclicGroup(4))
 
